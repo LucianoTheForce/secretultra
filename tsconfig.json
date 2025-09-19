@@ -20,7 +20,7 @@
     ],
     "types": ["react", "react-dom", "node"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*", "./app/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

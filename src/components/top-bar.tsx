@@ -1,0 +1,78 @@
+"use client"
+
+import React from "react"
+import { Download, Share2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
+import { ModeToggle } from "@/components/ui/mode-toggle"
+import { UserProfile } from "@/components/auth/user-profile"
+
+interface TopBarProps {
+  isGenerating: boolean
+  generationProgress: number
+  zoom: number
+  onZoomChange: (zoom: number) => void
+  onGenerate: () => void
+  onExport: () => void
+  onShare: () => void
+  className?: string
+}
+
+export function TopBar({
+  onExport,
+  onShare,
+  className,
+}: TopBarProps) {
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between px-1 py-0.5 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        className,
+      )}
+    >
+      {/* Left Section - Brand only */}
+      <div className="flex items-center space-x-1">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/ultragaz-logo.png" alt="ultragaz" className="w-9 h-9" />
+        <span className="text-xs font-medium">ultragaz</span>
+      </div>
+
+      {/* Center spacer */}
+      <div />
+
+      {/* Right Section - Actions + Credits + Theme + Profile */}
+      <div className="flex items-center space-x-1">
+        <Button variant="outline" size="sm" onClick={onExport}>
+          <Download className="w-4 h-4 mr-2" />
+          Export
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onShare}>
+              <Share2 className="w-4 h-4 mr-2" />
+              Share Link
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Download className="w-4 h-4 mr-2" />
+              Download ZIP
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">42 credits</Badge>
+        <ModeToggle />
+        <UserProfile />
+      </div>
+    </div>
+  )
+}

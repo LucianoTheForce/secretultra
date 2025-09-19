@@ -1,234 +1,148 @@
-# Agentic Coding Boilerplate
+# Ultragaz Character Generation Studio
 
-A complete agentic coding boilerplate with authentication, PostgreSQL database, AI chat functionality, and modern UI components - perfect for building AI-powered applications and autonomous agents.
+An AI-powered character generation studio for creating Ultragaz mascots and brand characters using Next.js, TypeScript, and Google Gemini AI.
 
-## 🚀 Features
+## 🎨 Features
 
-- **🔐 Authentication**: Better Auth with Google OAuth integration
-- **🗃️ Database**: Drizzle ORM with PostgreSQL
-- **🤖 AI Integration**: Vercel AI SDK with OpenAI support
-- **🎨 UI Components**: shadcn/ui with Tailwind CSS
-- **⚡ Modern Stack**: Next.js 15, React 19, TypeScript
-- **📱 Responsive**: Mobile-first design approach
+- **AI-Powered Character Generation**: Generate detailed character descriptions using Google Gemini AI
+- **Interactive 3D Studio Interface**: Three-panel layout with character selection, visualization, and properties
+- **Character Presets**: Pre-configured characters (ULLY, ULTRINHO) with customization options
+- **Real-time Preview**: Live visualization of character modifications
+- **Preset Library**: Poses, expressions, backgrounds, and lighting presets
+- **Responsive Design**: Optimized for various screen sizes
 
-## 🎥 Video Tutorial
+## 🚀 Tech Stack
 
-Watch the complete walkthrough of this agentic coding template:
+- **Framework**: Next.js 15.4.6 with Turbopack
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **AI Integration**: Vercel AI SDK with Google Gemini 2.0 Flash
+- **State Management**: Zustand
+- **Animations**: Framer Motion
+- **Deployment**: Vercel Edge Runtime
 
-[![Agentic Coding Boilerplate Tutorial](https://img.youtube.com/vi/T0zFZsr_d0Q/maxresdefault.jpg)](https://youtu.be/T0zFZsr_d0Q)
+## 📦 Installation
 
-<a href="https://youtu.be/T0zFZsr_d0Q" target="_blank" rel="noopener noreferrer">🔗 Watch on YouTube</a>
-
-## ☕ Support This Project
-
-If this boilerplate helped you build something awesome, consider buying me a coffee!
-
-[![Buy me a coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/leonvanzyl)
-
-## 📋 Prerequisites
-
-Before you begin, ensure you have the following installed on your machine:
-
-- **Node.js**: Version 18.0 or higher (<a href="https://nodejs.org/" target="_blank">Download here</a>)
-- **Git**: For cloning the repository (<a href="https://git-scm.com/" target="_blank">Download here</a>)
-- **PostgreSQL**: Either locally installed or access to a hosted service like Vercel Postgres
-
-## 🛠️ Quick Setup
-
-### 1. Clone or Download the Repository
-
-**Option A: Clone with Git**
-
+1. Clone the repository:
 ```bash
-git clone https://github.com/leonvanzyl/agentic-coding-starter-kit.git
-cd agentic-coding-starter-kit
+git clone https://github.com/YOUR_USERNAME/ultragaz-character-studio.git
+cd ultragaz-character-studio
 ```
 
-**Option B: Download ZIP**
-Download the repository as a ZIP file and extract it to your desired location.
-
-### 2. Install Dependencies
-
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-### 3. Environment Setup
-
-Copy the example environment file:
-
+3. Set up environment variables:
 ```bash
-cp env.example .env
+cp .env.example .env.local
 ```
 
-Fill in your environment variables in the `.env` file:
-
+4. Add your Google Gemini API key to `.env.local`:
 ```env
-# Database
-POSTGRES_URL="postgresql://username:password@localhost:5432/your_database_name"
-
-# Authentication - Better Auth
-BETTER_AUTH_SECRET="your-random-32-character-secret-key-here"
-
-# Google OAuth (Get from Google Cloud Console)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-
-# AI Integration (Optional - for chat functionality)
-OPENAI_API_KEY="sk-your-openai-api-key-here"
-OPENAI_MODEL="gpt-5-mini"
-
-# App URL (for production deployments)
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
+GOOGLE_GENERATIVE_AI_API_KEY=your_api_key_here
 ```
 
-### 4. Database Setup
+## 🏃‍♂️ Development
 
-Generate and run database migrations:
-
-```bash
-npm run db:generate
-npm run db:migrate
-```
-
-### 5. Start the Development Server
+Run the development server:
 
 ```bash
 npm run dev
 ```
 
-Your application will be available at [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000/studio](http://localhost:3000/studio) to see the application.
 
-## ⚙️ Service Configuration
-
-### PostgreSQL Database on Vercel
-
-1. Go to <a href="https://vercel.com/dashboard" target="_blank">Vercel Dashboard</a>
-2. Navigate to the **Storage** tab
-3. Click **Create** → **Postgres**
-4. Choose your database name and region
-5. Copy the `POSTGRES_URL` from the `.env.local` tab
-6. Add it to your `.env` file
-
-### Google OAuth Credentials
-
-1. Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>
-2. Create a new project or select an existing one
-3. Navigate to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
-4. Set application type to **Web application**
-5. Add authorized redirect URIs:
-   - `http://localhost:3000/api/auth/callback/google` (development)
-   - `https://yourdomain.com/api/auth/callback/google` (production)
-6. Copy the **Client ID** and **Client Secret** to your `.env` file
-
-### OpenAI API Key
-
-1. Go to <a href="https://platform.openai.com/dashboard" target="_blank">OpenAI Platform</a>
-2. Navigate to **API Keys** in the sidebar
-3. Click **Create new secret key**
-4. Give it a name and copy the key
-5. Add it to your `.env` file as `OPENAI_API_KEY`
-
-## 🗂️ Project Structure
+## 🏗️ Project Structure
 
 ```
-src/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   │   ├── auth/          # Authentication endpoints
-│   │   └── chat/          # AI chat endpoint
-│   ├── chat/              # AI chat page
-│   ├── dashboard/         # User dashboard
-│   └── page.tsx           # Home page
-├── components/            # React components
-│   ├── auth/             # Authentication components
-│   └── ui/               # shadcn/ui components
-└── lib/                  # Utilities and configurations
-    ├── auth.ts           # Better Auth configuration
-    ├── auth-client.ts    # Client-side auth utilities
-    ├── db.ts             # Database connection
-    ├── schema.ts         # Database schema
-    └── utils.ts          # General utilities
+├── app/
+│   ├── studio/           # Main studio interface
+│   ├── api/
+│   │   └── images/
+│   │       └── generate/ # AI generation endpoint
+│   └── layout.tsx        # Root layout
+├── src/
+│   ├── components/       # React components
+│   │   ├── studio/      # Studio-specific components
+│   │   └── ui/          # Reusable UI components
+│   └── lib/             # Utility functions
+├── public/              # Static assets
+└── docs/               # Documentation
 ```
 
-## 🔧 Available Scripts
+## 🎯 Usage
+
+1. **Select a Character**: Choose from ULLY, ULTRINHO, or create a custom character
+2. **Enter a Prompt**: Describe the character you want to generate
+3. **Generate**: Click the generate button to create AI-powered descriptions
+4. **Customize**: Use the preset library to adjust poses, expressions, and backgrounds
+5. **Export**: Save or share your generated characters
+
+## 🔧 Configuration
+
+### Environment Variables
+
+- `GOOGLE_GENERATIVE_AI_API_KEY`: Your Google Gemini API key (required for AI features)
+- `NEXT_PUBLIC_APP_URL`: Your application URL (for production)
+
+### AI Model Configuration
+
+The app uses Google Gemini 2.0 Flash Preview model. You can modify the model settings in:
+```typescript
+// app/api/images/generate/route.ts
+const model = google('gemini-2.0-flash-exp')
+```
+
+## 📝 API Endpoints
+
+### Generate Character Description
+```
+POST /api/images/generate
+```
+
+Request body:
+```json
+{
+  "prompt": "A friendly Ultragaz mascot",
+  "style": "cartoon",
+  "characterType": "ULLY"
+}
+```
+
+## 🚢 Deployment
+
+### Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/ultragaz-character-studio)
+
+1. Click the button above
+2. Configure your environment variables
+3. Deploy!
+
+### Manual Deployment
 
 ```bash
-npm run dev          # Start development server with Turbopack
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run db:generate  # Generate database migrations
-npm run db:migrate   # Run database migrations
-npm run db:push      # Push schema changes to database
-npm run db:studio    # Open Drizzle Studio (database GUI)
-npm run db:dev       # Push schema for development
-npm run db:reset     # Reset database (drop all tables)
+npm run build
+npm run start
 ```
-
-## 📖 Pages Overview
-
-- **Home (`/`)**: Landing page with setup instructions and features overview
-- **Dashboard (`/dashboard`)**: Protected user dashboard with profile information
-- **Chat (`/chat`)**: AI-powered chat interface using OpenAI (requires authentication)
-
-## 🚀 Deployment
-
-### Deploy to Vercel (Recommended)
-
-1. Install the Vercel CLI globally:
-
-   ```bash
-   npm install -g vercel
-   ```
-
-2. Deploy your application:
-
-   ```bash
-   vercel --prod
-   ```
-
-3. Follow the prompts to configure your deployment
-4. Add your environment variables when prompted or via the Vercel dashboard
-
-### Production Environment Variables
-
-Ensure these are set in your production environment:
-
-- `POSTGRES_URL` - Production PostgreSQL connection string
-- `BETTER_AUTH_SECRET` - Secure random 32+ character string
-- `GOOGLE_CLIENT_ID` - Google OAuth Client ID
-- `GOOGLE_CLIENT_SECRET` - Google OAuth Client Secret
-- `OPENAI_API_KEY` - OpenAI API key (optional)
-- `OPENAI_MODEL` - OpenAI model name (optional, defaults to gpt-5-mini)
-- `NEXT_PUBLIC_APP_URL` - Your production domain
-
-## 🎥 Tutorial Video
-
-Watch my comprehensive tutorial on how to use this agentic coding boilerplate to build AI-powered applications:
-
-<a href="https://youtu.be/T0zFZsr_d0Q" target="_blank" rel="noopener noreferrer">📺 YouTube Tutorial - Building with Agentic Coding Boilerplate</a>
 
 ## 🤝 Contributing
 
-1. Fork this repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📝 License
+## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
-## 🆘 Need Help?
+## 🙏 Acknowledgments
 
-If you encounter any issues:
-
-1. Check the [Issues](https://github.com/leonvanzyl/agentic-coding-starter-kit/issues) section
-2. Review the documentation above
-3. Create a new issue with detailed information about your problem
+- Ultragaz for brand assets and character designs
+- Vercel for hosting and AI SDK
+- Google for Gemini AI model
+- shadcn/ui for beautiful components
 
 ---
 
-**Happy coding! 🚀**
+Built with ❤️ for Ultragaz Character Generation

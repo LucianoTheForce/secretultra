@@ -1,28 +1,34 @@
 import Link from "next/link";
+import Image from "next/image";
 import { UserProfile } from "@/components/auth/user-profile";
-import { ModeToggle } from "./ui/mode-toggle";
-import { Bot } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ModeToggle } from "@/components/ui/mode-toggle";
+
+function CreditsBadge() {
+  return (
+    <Badge variant="secondary" className="text-xs px-2 py-1">
+      42 credits
+    </Badge>
+  );
+}
 
 export function SiteHeader() {
   return (
-    <header className="border-b">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
-          >
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-              <Bot className="h-5 w-5" />
-            </div>
-            <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Starter Kit
-            </span>
-          </Link>
-        </h1>
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="px-4 py-3 flex items-center justify-between">
+        {/* Left: Brand + Tabs */}
         <div className="flex items-center gap-4">
-          <UserProfile />
+          <Link href="/studio" className="flex items-center gap-2">
+            <Image src="/ultragaz-logo.png" alt="ultragaz" width={24} height={24} />
+            <span className="font-semibold">ultragaz</span>
+          </Link>
+        </div>
+
+        {/* Right actions */}
+        <div className="flex items-center gap-3">
+          <CreditsBadge />
           <ModeToggle />
+          <UserProfile />
         </div>
       </div>
     </header>
