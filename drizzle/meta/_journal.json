@@ -1,13 +1,20 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1758110220907,
-      "tag": "0000_serious_nebula",
-      "breakpoints": true
-    }
-  ]
+    "version":  "7",
+    "dialect":  "postgresql",
+    "entries":  [
+                    {
+                        "idx":  0,
+                        "version":  "7",
+                        "when":  1758110220907,
+                        "tag":  "0000_serious_nebula",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  1,
+                        "version":  "7",
+                        "when":  1758300605219,
+                        "tag":  "0001_store_generated_images",
+                        "breakpoints":  false
+                    }
+                ]
 }

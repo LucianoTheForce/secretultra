@@ -1,16 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { Sparkles } from "lucide-react"
+import { Loader2, Sparkles } from "lucide-react"
 
+import { cn } from "@/lib/utils"
+import { CHARACTER_CONFIG, type CharacterPresetCategory, type CharacterPresetItem } from "@/lib/character-presets"
 import { CanvasPro } from "@/components/canvas-pro"
 import { LeftPanel } from "@/components/left-panel"
 import { RightPanel, type FormatOption } from "@/components/right-panel"
 import { TopBar } from "@/components/top-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { CharacterId, Prompt } from "@/types"
+import type { CharacterId, GeneratedImage, Prompt } from "@/types"
 
 const PERSON_GENERATION = "allow_all" as const
 
@@ -32,53 +34,60 @@ export default function StudioPage() {
   const [lastDescription, setLastDescription] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [selectedFormat, setSelectedFormat] = useState<FormatOption>("16:9")
+  const [history, setHistory] = useState<GeneratedImage[]>([])
+
+  const [selectedPresets, setSelectedPresets] = useState<Partial<Record<CharacterPresetCategory, CharacterPresetItem | undefined>>>({})
+  const characterConfig = CHARACTER_CONFIG[selectedCharacter]
+  const generationStartRef = useRef<number | null>(null)
+  const generationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState<number | null>(null)
+  const [lastGenerationDurationSeconds, setLastGenerationDurationSeconds] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (isGenerating) {
+      if (generationTimerRef.current !== null) {
+        clearInterval(generationTimerRef.current)
+      }
+
+      generationStartRef.current = performance.now()
+      setGenerationElapsedSeconds(0)
+      setLastGenerationDurationSeconds(null)
+
+      generationTimerRef.current = window.setInterval(() => {
+        if (generationStartRef.current === null) return
+        const elapsed = (performance.now() - generationStartRef.current) / 1000
+        setGenerationElapsedSeconds(elapsed)
+      }, 100)
+
+      return () => {
+        if (generationTimerRef.current !== null) {
+          clearInterval(generationTimerRef.current)
+          generationTimerRef.current = null
+        }
+      }
+    }
+
+    if (generationTimerRef.current !== null) {
+      clearInterval(generationTimerRef.current)
+      generationTimerRef.current = null
+    }
+
+    if (generationStartRef.current !== null) {
+      const duration = (performance.now() - generationStartRef.current) / 1000
+      setLastGenerationDurationSeconds(duration)
+      generationStartRef.current = null
+    }
+
+    setGenerationElapsedSeconds(null)
+  }, [isGenerating])
+
+  const formatSeconds = (value: number) => (value >= 10 ? `${Math.round(value)}s` : `${value.toFixed(1)}s`)
 
   const [prompt, setPrompt] = useState<Prompt>({
     text: "",
     creativity: 0.7,
     seed: "random",
   })
-
-  const loadAsBase64 = async (path: string): Promise<string> => {
-    try {
-      const res = await fetch(path, { cache: "force-cache" })
-      if (!res.ok) return ""
-      const blob = await res.blob()
-      const bitmap = await createImageBitmap(blob)
-      const maxSide = 1024
-      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
-      const width = Math.max(1, Math.round(bitmap.width * scale))
-      const height = Math.max(1, Math.round(bitmap.height * scale))
-      const canvas = document.createElement("canvas")
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext("2d")
-      if (!ctx) return ""
-      ctx.drawImage(bitmap, 0, 0, width, height)
-      const dataUrl = canvas.toDataURL("image/png")
-      return dataUrl.split(",").pop() ?? ""
-    } catch (error) {
-      console.error("Failed to prepare reference image", error)
-      return ""
-    }
-  }
-
-  const findSheetUrl = async (): Promise<string | null> => {
-    for (const candidate of ["/ultragaz-character-sheet.png", "/ultragaz-character-sheet.jpg"]) {
-      try {
-        const response = await fetch(candidate, { method: "HEAD", cache: "no-store" })
-        if (response.ok) return candidate
-      } catch {
-        // ignore fetch errors for missing assets
-      }
-    }
-    return null
-  }
-
-  const loadSheetBase64 = async (): Promise<string> => {
-    const url = await findSheetUrl()
-    return url ? await loadAsBase64(url) : ""
-  }
 
   const handleGenerate = () => {
     ;(async () => {
@@ -88,27 +97,33 @@ export default function StudioPage() {
         setIsGenerating(true)
         setGenerationProgress(10)
 
-        const sheet = await loadSheetBase64()
+        const presetPrompts = Object.values(selectedPresets)
+          .map((preset) => preset?.prompt ?? "")
+          .filter((value) => value.trim().length > 0)
+        const finalPrompt =
+          presetPrompts.length > 0 ? `${prompt.text.trim()}\n${presetPrompts.join("\n")}` : prompt.text
         const seed = parseSeed(prompt.seed)
+
+        const payload = {
+          prompt: finalPrompt,
+          temperature: prompt.creativity,
+          seed,
+          aspectRatio: selectedFormat,
+          personGeneration: PERSON_GENERATION,
+        }
+
+        console.info("[studio] Sending generation request", {
+          ...payload,
+          referenceImageStrategy: "server-managed-character-sheet",
+        })
 
         const res = await fetch("/api/images/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: prompt.text,
-            temperature: prompt.creativity,
-            referenceImages: sheet ? [sheet] : [],
-            seed,
-            aspectRatio: selectedFormat,
-            personGeneration: PERSON_GENERATION,
-          }),
+          body: JSON.stringify(payload),
         })
 
-        const data: {
-          images?: string[]
-          description?: string
-          error?: string
-        } = await res.json()
+        const data: { images?: GeneratedImage[]; description?: string; error?: string } = await res.json()
 
         if (!res.ok || data.error) {
           throw new Error(data.error || "Image generation failed")
@@ -116,14 +131,21 @@ export default function StudioPage() {
 
         setGenerationProgress(85)
 
-        if (data.images && data.images.length > 0) {
-          const firstImage = data.images[0]
-          const isUrl = firstImage.startsWith("/") || firstImage.startsWith("http")
-          const imageUrl = isUrl ? firstImage : `data:image/png;base64,${firstImage}`
-          setGeneratedImage(imageUrl)
+        if (Array.isArray(data.images) && data.images.length > 0) {
+          const images = data.images
+          setHistory((prev) => {
+            const existingIds = new Set(prev.map((item) => item.id))
+            const nextItems = [
+              ...images.filter((item) => !existingIds.has(item.id)),
+              ...prev,
+            ]
+            return nextItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          })
+          setGeneratedImage(images[0].imagePath)
+          setLastDescription(images[0].description ?? data.description ?? null)
+        } else {
+          setLastDescription(data.description ?? null)
         }
-
-        setLastDescription(data.description ?? null)
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unexpected error"
         console.error(error)
@@ -136,8 +158,14 @@ export default function StudioPage() {
     })()
   }
 
-  const handlePresetSelect = (category: "pose" | "expression" | "background" | "lighting", presetId: string) => {
-    console.log(`Selected ${category}: ${presetId}`)
+  const handlePresetSelect = (category: CharacterPresetCategory, preset: CharacterPresetItem) => {
+    setSelectedPresets((prev) => {
+      const alreadySelected = prev[category]?.id === preset.id
+      return {
+        ...prev,
+        [category]: alreadySelected ? undefined : preset,
+      }
+    })
   }
 
   const handleExport = () => {
@@ -148,11 +176,61 @@ export default function StudioPage() {
     console.log("Sharing...")
   }
 
+  useEffect(() => {
+    const handleHistoryNavigation = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+        return
+      }
+
+      const activeElement = document.activeElement
+      if (
+        activeElement instanceof HTMLElement &&
+        ["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName)
+      ) {
+        return
+      }
+
+      if (history.length === 0) {
+        return
+      }
+
+      const currentIndex = history.findIndex((image) => image.imagePath === generatedImage)
+      let nextIndex = currentIndex
+
+      if (event.key === "ArrowLeft") {
+        nextIndex = currentIndex === -1 ? 0 : Math.min(history.length - 1, currentIndex + 1)
+      } else {
+        nextIndex = currentIndex <= 0 ? 0 : currentIndex - 1
+      }
+
+      if (nextIndex === currentIndex && currentIndex !== -1) {
+        return
+      }
+
+      const nextImage = history[nextIndex]
+      if (!nextImage) {
+        return
+      }
+
+      event.preventDefault()
+      setGeneratedImage(nextImage.imagePath)
+      setLastDescription(nextImage.description ?? null)
+      setGenerationError(null)
+    }
+
+    window.addEventListener("keydown", handleHistoryNavigation)
+    return () => {
+      window.removeEventListener("keydown", handleHistoryNavigation)
+    }
+  }, [history, generatedImage])
+
   return (
     <div className="h-screen flex flex-col bg-background">
       <TopBar
         isGenerating={isGenerating}
         generationProgress={generationProgress}
+        generationElapsedSeconds={generationElapsedSeconds}
+        lastGenerationDurationSeconds={lastGenerationDurationSeconds}
         zoom={zoom}
         onZoomChange={setZoom}
         onGenerate={handleGenerate}
@@ -163,15 +241,14 @@ export default function StudioPage() {
       <div className="flex-1 flex overflow-hidden">
         <LeftPanel
           selectedCharacter={selectedCharacter}
-          onCharacterChange={async (id) => {
+          onCharacterChange={(id) => {
             setSelectedCharacter(id)
+            setSelectedPresets({})
             setLastDescription(null)
             setGenerationError(null)
-            if (id === "ULTRINHO") {
-              const url = await findSheetUrl()
-              setGeneratedImage(url ?? "/3d-boy-character-with-glasses.jpg")
-            }
           }}
+          characterConfig={characterConfig}
+          selectedPresets={selectedPresets}
           onPresetSelect={handlePresetSelect}
         />
 
@@ -179,7 +256,7 @@ export default function StudioPage() {
           <CanvasPro zoom={zoom} onZoomChange={setZoom} className="flex-1" imageUrl={generatedImage} />
 
           {(lastDescription || generationError) && (
-            <div className="border-t border-border/70 bg-background/80 px-4 py-3 space-y-2 text-sm">
+            <div className="border-t border-border/70 bg-background/80 px-4 py-3 text-sm h-44 overflow-y-auto space-y-2">
               {lastDescription && (
                 <div className="text-muted-foreground whitespace-pre-line">
                   <p className="font-medium text-foreground">Model notes</p>
@@ -200,11 +277,34 @@ export default function StudioPage() {
                 placeholder="What will you imagine?"
                 value={prompt.text}
                 onChange={(event) => setPrompt((prev) => ({ ...prev, text: event.target.value }))}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.altKey &&
+                    !event.ctrlKey &&
+                    !event.metaKey
+                  ) {
+                    event.preventDefault()
+                    if (!isGenerating) {
+                      handleGenerate()
+                    }
+                  }
+                }}
               />
             </div>
             <Button onClick={handleGenerate} className="gap-2" disabled={isGenerating}>
-              <Sparkles className="w-4 h-4" />
-              {isGenerating ? "Generating..." : "Generate"}
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {`Generating ${formatSeconds(generationElapsedSeconds ?? 0)}`}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -217,20 +317,35 @@ export default function StudioPage() {
 
       <div className="border-t px-3 py-2 overflow-x-auto">
         <div className="flex items-center gap-3 min-h-[70px]">
-          {generatedImage ? (
-            <Image
-              src={generatedImage}
-              alt="generated"
-              width={56}
-              height={56}
-              unoptimized={generatedImage.startsWith("data:")}
-              className="h-14 w-14 rounded-md object-cover border"
-            />
-          ) : null}
+          {history.length === 0 ? (
+            <span className="text-xs text-muted-foreground">No generations yet</span>
+          ) : (
+            history.map((image) => (
+              <button
+                key={image.id}
+                type="button"
+                onClick={() => {
+                  setGeneratedImage(image.imagePath)
+                  setLastDescription(image.description ?? null)
+                  setGenerationError(null)
+                }}
+                className={cn(
+                  "relative rounded-md border transition hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  generatedImage === image.imagePath ? "border-primary" : "border-border"
+                )}
+              >
+                <Image
+                  src={image.imagePath}
+                  alt={image.prompt}
+                  width={72}
+                  height={72}
+                  className="h-16 w-16 rounded-md object-cover"
+                />
+              </button>
+            ))
+          )}
         </div>
       </div>
     </div>
   )
 }
-
-

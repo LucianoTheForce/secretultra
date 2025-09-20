@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Download, Share2 } from "lucide-react"
+import { Download, Share2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -12,6 +12,8 @@ import { UserProfile } from "@/components/auth/user-profile"
 interface TopBarProps {
   isGenerating: boolean
   generationProgress: number
+  generationElapsedSeconds: number | null
+  lastGenerationDurationSeconds: number | null
   zoom: number
   onZoomChange: (zoom: number) => void
   onGenerate: () => void
@@ -21,10 +23,14 @@ interface TopBarProps {
 }
 
 export function TopBar({
+  isGenerating,
+  generationElapsedSeconds,
+  lastGenerationDurationSeconds,
   onExport,
   onShare,
   className,
 }: TopBarProps) {
+  const formatSeconds = (value: number) => (value >= 10 ? `${Math.round(value)}s` : `${value.toFixed(1)}s`)
 
   return (
     <div
@@ -45,6 +51,17 @@ export function TopBar({
 
       {/* Right Section - Actions + Credits + Theme + Profile */}
       <div className="flex items-center space-x-1">
+        {isGenerating ? (
+          <Badge variant="outline" className="flex items-center gap-1 text-[10px] px-1.5 py-0.5">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            {`Generating ${formatSeconds((generationElapsedSeconds ?? 0))}`}
+          </Badge>
+        ) : lastGenerationDurationSeconds !== null ? (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+            {`Last gen ${formatSeconds(lastGenerationDurationSeconds)}`}
+          </Badge>
+        ) : null}
+
         <Button variant="outline" size="sm" onClick={onExport}>
           <Download className="w-4 h-4 mr-2" />
           Export

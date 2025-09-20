@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -49,3 +49,24 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
 });
+
+export const generatedImages = pgTable(
+  "generated_image",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    prompt: text("prompt").notNull(),
+    description: text("description"),
+    imagePath: text("image_path").notNull(),
+    model: text("model").notNull(),
+    aspectRatio: text("aspect_ratio"),
+    seed: text("seed"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("generated_image_user_idx").on(table.userId),
+    createdAtIdx: index("generated_image_created_at_idx").on(table.createdAt),
+  })
+);

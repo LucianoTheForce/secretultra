@@ -5,6 +5,7 @@ import React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { CHARACTER_CONFIG } from "@/lib/character-presets"
 import type { CharacterId } from "@/types"
 
 interface CharacterSelectorProps {
@@ -13,40 +14,32 @@ interface CharacterSelectorProps {
   className?: string
 }
 
-const CHARACTER_DATA: Record<string, { id: CharacterId; name: string; description: string; preview: string }> = {
-  ULLY: {
-    id: "ULLY",
-    name: "Ully",
-    description: "O mascote oficial da Ultragaz, simpatico e carismatico",
-    preview: "/ultragaz-character-in-living-room.jpg",
-  },
-  ULTRINHO: {
-    id: "ULTRINHO",
-    name: "Ultrinho",
-    description: "Versao infantil do mascote, perfeito para conteudo kids",
-    preview: "/3d-boy-character-with-glasses.jpg",
-  },
-  CUSTOM: {
-    id: "CUSTOM",
-    name: "Custom Character",
-    description: "Create your own unique character design",
-    preview: "/placeholder.svg",
-  },
-}
+const CHARACTER_ITEMS = (Object.keys(CHARACTER_CONFIG) as CharacterId[])
+  .filter((id) => id !== "CUSTOM")
+  .map((id) => ({
+    id,
+    name: CHARACTER_CONFIG[id].name,
+    description:
+      id === "ULTRINHO"
+        ? "Versao infantil do mascote, perfeito para conteudo kids"
+        : "O mascote oficial da Ultragaz, simpatico e carismatico",
+    preview: CHARACTER_CONFIG[id].references[0] ?? "/placeholder.svg",
+  }))
 
 export function CharacterSelector({ selectedCharacter, onCharacterChange, className }: CharacterSelectorProps) {
+  const selectedInfo = CHARACTER_ITEMS.find((character) => character.id === selectedCharacter)
 
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Choose Character</h3>
         <Badge variant="secondary" className="text-xs">
-          {Object.keys(CHARACTER_DATA).length} available
+          {CHARACTER_ITEMS.length} available
         </Badge>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {Object.values(CHARACTER_DATA).map((character) => (
+        {CHARACTER_ITEMS.map((character) => (
           <Card
             key={character.id}
             className={cn(
@@ -85,14 +78,14 @@ export function CharacterSelector({ selectedCharacter, onCharacterChange, classN
         ))}
       </div>
 
-      {selectedCharacter && (
+      {selectedInfo && (
         <div className="p-3 bg-muted/50 rounded-lg border">
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 bg-green-500 rounded-full" />
-            <span className="text-sm font-medium">{CHARACTER_DATA[selectedCharacter].name} selected</span>
+            <span className="text-sm font-medium">{selectedInfo.name} selecionado</span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Character sheet will be automatically included in generations
+            As referencias desse personagem são usadas internamente durante a geração.
           </p>
         </div>
       )}

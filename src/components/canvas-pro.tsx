@@ -81,7 +81,7 @@ export function CanvasPro({ zoom, onZoomChange, imageUrl, className }: CanvasPro
   }
 
   return (
-    <div className={cn("flex-1 flex flex-col bg-muted/20", className)}>
+    <div className={cn("flex-1 flex flex-col", className)}>
       {/* Canvas Toolbar */}
       <div className="flex items-center justify-between p-4 border-b bg-background/95">
         <div className="flex items-center space-x-2">
@@ -139,7 +139,7 @@ export function CanvasPro({ zoom, onZoomChange, imageUrl, className }: CanvasPro
           }}
         >
           {/* Main Canvas */}
-          <div className="w-[800px] h-[600px] bg-white rounded-lg shadow-lg border-2 border-border relative overflow-hidden">
+          <div className="relative w-[800px] h-[600px] overflow-hidden">
             {/* Canvas Image */}
             <div className="absolute inset-0 flex items-center justify-center">
               {imageUrl ? (

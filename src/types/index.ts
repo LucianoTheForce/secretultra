@@ -123,6 +123,17 @@ export interface GenerationSettings {
   synthIdWatermark: boolean
 }
 
+// Generated image persistence
+export interface GeneratedImage {
+  id: string
+  prompt: string
+  description?: string | null
+  imagePath: string
+  model: string
+  aspectRatio?: string | null
+  seed?: string | null
+  createdAt: string
+}
 // User and Auth Types (Mock)
 export interface User {
   id: string
