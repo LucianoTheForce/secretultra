@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Loader2, Sparkles } from "lucide-react"
@@ -40,6 +40,10 @@ export default function StudioPage() {
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [selectedFormat, setSelectedFormat] = useState<FormatOption>("16:9")
   const [history, setHistory] = useState<GeneratedImage[]>([])
+  const currentImage = useMemo(
+    () => history.find((item) => item.imagePath === generatedImage),
+    [history, generatedImage]
+  )
 
   const [credits, setCredits] = useState<number | null>(null)
   const [totalGenerated, setTotalGenerated] = useState<number | null>(null)
@@ -227,13 +231,32 @@ export default function StudioPage() {
   }
 
   const handleExport = () => {
-    console.log("Exporting...")
+    const target = currentImage
+    if (!target) {
+      console.info("[studio] No image selected to export")
+      return
+    }
+
+    const downloadUrl = target.backgroundRemovedUrl ?? target.shareUrl ?? target.imagePath
+    window.open(downloadUrl, "_blank", "noopener,noreferrer")
   }
 
-  const handleShare = () => {
-    console.log("Sharing...")
-  }
+  const handleShare = async () => {
+    const target = currentImage
+    if (!target) {
+      console.info("[studio] No image selected to share")
+      return
+    }
 
+    const link = target.shareUrl ?? target.imagePath
+    try {
+      await navigator.clipboard.writeText(link)
+      console.info("[studio] Share link copied to clipboard")
+    } catch (error) {
+      console.error("[studio] Failed to copy share link", error)
+      window.open(link, "_blank", "noopener,noreferrer")
+    }
+  }
   useEffect(() => {
     const handleHistoryNavigation = (event: KeyboardEvent) => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
@@ -411,3 +434,6 @@ export default function StudioPage() {
     </div>
   )
 }
+
+
+

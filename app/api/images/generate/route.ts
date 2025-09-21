@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText, type CoreMessage, type ImagePart, type JSONValue, type TextPart } from "ai";
+import { generateText, type CoreMessage, type ImagePart, type TextPart } from "ai";
 import type { SharedV2ProviderOptions } from "@ai-sdk/provider";
 import { and, eq, gte, sql } from "drizzle-orm";
 
@@ -10,6 +10,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generatedImages, user } from "@/lib/schema";
 import { PUBLIC_IMAGE_ENGINE_NAME } from "@/lib/constants";
+import { createImageKitUrl, imageKit, resolveImageKitFolder } from "@/lib/imagekit";
 
 type GenerateBody = {
   prompt: string;
@@ -35,22 +36,6 @@ const INSUFFICIENT_CREDITS = Symbol("INSUFFICIENT_CREDITS");
 const INSUFFICIENT_CREDITS_MESSAGE =
   "Voce nao tem creditos suficientes. Peca ao administrador para liberar mais creditos.";
 const PUBLIC_IMAGE_ENGINE_RESPONSE = PUBLIC_IMAGE_ENGINE_NAME;
-
-function sanitizeModelMentions(input?: string | null): string | null {
-  if (input == null) {
-    return null;
-  }
-
-  return input
-    .replace(/google\s+generative\s+ai/gi, "image engine")
-    .replace(/gemini/gi, "image engine");
-}
-
-function sanitizeErrorMessage(message?: string | null): string {
-  const sanitized = sanitizeModelMentions(message ?? "") ?? "";
-  const fallback = "O servico de geracao de imagens esta indisponivel no momento. Tente novamente em instantes.";
-  return sanitized.trim().length > 0 ? sanitized : fallback;
-}
 
 function normalizeBase64(input?: string | null): string | null {
   if (!input) return null;
@@ -105,7 +90,41 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function sanitizeModelMentions(input?: string | null): string | null {
+  if (input == null) {
+    return null;
+  }
+
+  return input
+    .replace(/google\s+generative\s+ai/gi, "image engine")
+    .replace(/gemini/gi, "image engine");
+}
+
+function sanitizeErrorMessage(message?: string | null): string {
+  const sanitized = sanitizeModelMentions(message ?? "") ?? "";
+  const fallback = "O servico de geracao de imagens esta indisponivel no momento. Tente novamente em instantes.";
+  return sanitized.trim().length > 0 ? sanitized : fallback;
+}
+
+function buildImageKitVariants(filePath: string) {
+  return {
+    shareUrl: createImageKitUrl(filePath, [{ width: 1200, format: "jpg" }]),
+    previewUrl: createImageKitUrl(filePath, [{ width: 512, height: 512, fit: "cover", format: "jpg" }]),
+    backgroundRemovedUrl: createImageKitUrl(filePath, [{ effect: "bg-removal", format: "png" }]),
+  };
+}
+
 export async function POST(req: Request) {
+  const uploads: {
+    id: string;
+    url: string;
+    fileId: string;
+    filePath: string;
+    shareUrl: string;
+    previewUrl: string;
+    backgroundRemovedUrl: string;
+  }[] = [];
+
   try {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) {
@@ -123,10 +142,6 @@ export async function POST(req: Request) {
 
     if (!dbUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    if (dbUser.credits <= 0) {
-      return NextResponse.json({ error: INSUFFICIENT_CREDITS_MESSAGE }, { status: 402 });
     }
 
     const body = (await req.json()) as GenerateBody;
@@ -174,20 +189,12 @@ export async function POST(req: Request) {
 
     const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nAlways return a detailed written description alongside the generated imagery.`;
 
-    const googleOptions: Record<string, JSONValue> = {
-      responseModalities: ["IMAGE", "TEXT"],
-    };
-
-    if (body.aspectRatio) {
-      googleOptions.aspectRatio = body.aspectRatio;
-    }
-
-    if (body.personGeneration) {
-      googleOptions.personGeneration = body.personGeneration;
-    }
-
     const providerOptions: SharedV2ProviderOptions = {
-      google: googleOptions,
+      google: {
+        responseModalities: ["IMAGE", "TEXT"],
+        ...(body.aspectRatio ? { aspectRatio: body.aspectRatio } : {}),
+        ...(body.personGeneration ? { personGeneration: body.personGeneration } : {}),
+      },
     };
 
     const parsedSeed =
@@ -264,7 +271,6 @@ export async function POST(req: Request) {
     }
 
     const sanitizedDescription = sanitizeModelMentions(generation.text ?? null);
-
     const cost = base64Images.length;
 
     if (dbUser.credits < cost) {
@@ -277,80 +283,96 @@ export async function POST(req: Request) {
         ? body.seed
         : null;
 
-    const userDir = path.join(process.cwd(), "public", "generated", userId);
-    await fs.mkdir(userDir, { recursive: true });
+    const uploadFolder = resolveImageKitFolder(userId);
 
-    const { images, remainingCredits, totalGenerated } = await db.transaction(async (tx) => {
-      const creditUpdate = await tx
-        .update(user)
-        .set({ credits: sql`${user.credits} - ${cost}` })
-        .where(and(eq(user.id, userId), gte(user.credits, cost)))
-        .returning({ credits: user.credits });
-
-      if (creditUpdate.length === 0) {
-        throw INSUFFICIENT_CREDITS;
+    try {
+      for (const base64Image of base64Images) {
+        const id = crypto.randomUUID();
+        const upload = await imageKit.upload({
+          file: `data:image/png;base64,${base64Image}`,
+          fileName: `${id}.png`,
+          folder: uploadFolder,
+          useUniqueFileName: false,
+          overwriteFile: true,
+        });
+        const variants = buildImageKitVariants(upload.filePath);
+        uploads.push({
+          id,
+          url: upload.url,
+          fileId: upload.fileId,
+          filePath: upload.filePath,
+          ...variants,
+        });
       }
+    } catch (uploadError) {
+      await Promise.all(
+        uploads.map((item) => imageKit.deleteFile(item.fileId).catch(() => {}))
+      );
+      throw uploadError;
+    }
 
-      const writtenFiles: string[] = [];
-      const values: (typeof generatedImages.$inferInsert)[] = [];
-
+    const { images, remainingCredits, totalGenerated } = await (async () => {
       try {
-        for (const base64Image of base64Images) {
-          const id = crypto.randomUUID();
-          const fileName = `${id}.png`;
-          const absolutePath = path.join(userDir, fileName);
-          await fs.writeFile(absolutePath, Buffer.from(base64Image, "base64"));
-          writtenFiles.push(absolutePath);
-          const relativePath = `/generated/${userId}/${fileName}`;
+        return await db.transaction(async (tx) => {
+          const creditUpdate = await tx
+            .update(user)
+            .set({ credits: sql`${user.credits} - ${cost}` })
+            .where(and(eq(user.id, userId), gte(user.credits, cost)))
+            .returning({ credits: user.credits });
 
-          values.push({
-            id,
+          if (creditUpdate.length === 0) {
+            throw INSUFFICIENT_CREDITS;
+          }
+
+          const values = uploads.map((upload) => ({
+            id: upload.id,
             userId,
             prompt,
             description: sanitizedDescription,
-            imagePath: relativePath,
-            model: modelId,
+            imagePath: upload.url,
+            model: PUBLIC_IMAGE_ENGINE_RESPONSE,
             aspectRatio: body.aspectRatio ?? null,
             seed: seedValue,
-          });
-        }
+            imageKitFileId: upload.fileId,
+            shareUrl: upload.shareUrl,
+            backgroundRemovedUrl: upload.backgroundRemovedUrl,
+            previewUrl: upload.previewUrl,
+          }));
 
-        const inserted = await tx.insert(generatedImages).values(values).returning();
+          const inserted = await tx.insert(generatedImages).values(values).returning();
 
-        const totalRows = await tx
-          .select({ total: sql<number>`count(*)` })
-          .from(generatedImages)
-          .where(eq(generatedImages.userId, userId));
+          const totalRows = await tx
+            .select({ total: sql<number>`count(*)` })
+            .from(generatedImages)
+            .where(eq(generatedImages.userId, userId));
 
-        const totalGenerated = totalRows.length > 0 ? Number(totalRows[0].total ?? 0) : values.length;
+          const totalGenerated = totalRows.length > 0 ? Number(totalRows[0].total ?? 0) : values.length;
 
-        return {
-          images: inserted.map((record) => ({
-            id: record.id,
-            prompt: record.prompt,
-            description: sanitizeModelMentions(record.description ?? null),
-            imagePath: record.imagePath,
-            model: PUBLIC_IMAGE_ENGINE_RESPONSE,
-            aspectRatio: record.aspectRatio,
-            seed: record.seed,
-            createdAt: record.createdAt?.toISOString() ?? new Date().toISOString(),
-          })),
-          remainingCredits: creditUpdate[0].credits,
-          totalGenerated,
-        };
-      } catch (error) {
+          return {
+            images: inserted.map((record) => ({
+              id: record.id,
+              prompt: record.prompt,
+              description: sanitizeModelMentions(record.description ?? null),
+              imagePath: record.imagePath,
+              model: PUBLIC_IMAGE_ENGINE_RESPONSE,
+              aspectRatio: record.aspectRatio,
+              seed: record.seed,
+              shareUrl: record.shareUrl,
+              backgroundRemovedUrl: record.backgroundRemovedUrl,
+              previewUrl: record.previewUrl,
+              createdAt: record.createdAt?.toISOString() ?? new Date().toISOString(),
+            })),
+            remainingCredits: creditUpdate[0].credits,
+            totalGenerated,
+          };
+        });
+      } catch (dbError) {
         await Promise.all(
-          writtenFiles.map(async (filePath) => {
-            try {
-              await fs.unlink(filePath);
-            } catch {
-              // ignore cleanup errors
-            }
-          })
+          uploads.map((item) => imageKit.deleteFile(item.fileId).catch(() => {}))
         );
-        throw error;
+        throw dbError;
       }
-    });
+    })();
 
     return NextResponse.json({
       images,
@@ -369,19 +391,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: sanitizeErrorMessage(message) }, { status: 500 });
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

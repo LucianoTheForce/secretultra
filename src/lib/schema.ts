@@ -65,6 +65,10 @@ export const generatedImages = pgTable(
     model: text("model").notNull(),
     aspectRatio: text("aspect_ratio"),
     seed: text("seed"),
+    imageKitFileId: text("image_kit_file_id"),
+    shareUrl: text("share_url"),
+    backgroundRemovedUrl: text("background_removed_url"),
+    previewUrl: text("preview_url"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

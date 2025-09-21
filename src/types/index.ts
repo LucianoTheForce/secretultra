@@ -129,6 +129,9 @@ export interface GeneratedImage {
   prompt: string
   description?: string | null
   imagePath: string
+  shareUrl?: string | null
+  backgroundRemovedUrl?: string | null
+  previewUrl?: string | null
   model: string
   aspectRatio?: string | null
   seed?: string | null
@@ -152,3 +155,4 @@ export interface UserSession {
     autoSave: boolean
   }
 }
+
