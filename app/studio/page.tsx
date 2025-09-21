@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { Loader2, Sparkles } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -12,6 +13,7 @@ import { RightPanel, type FormatOption } from "@/components/right-panel"
 import { TopBar } from "@/components/top-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useCredits } from "@/hooks/use-credits"
 import type { CharacterId, GeneratedImage, Prompt } from "@/types"
 
 const PERSON_GENERATION = "allow_all" as const
@@ -26,6 +28,9 @@ function parseSeed(value: Prompt["seed"]): number | undefined {
 }
 
 export default function StudioPage() {
+  const router = useRouter()
+  const { data: creditData, refetch: refetchCredits } = useCredits()
+
   const [selectedCharacter, setSelectedCharacter] = useState<CharacterId>("ULLY")
   const [zoom, setZoom] = useState(1)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -35,6 +40,10 @@ export default function StudioPage() {
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [selectedFormat, setSelectedFormat] = useState<FormatOption>("16:9")
   const [history, setHistory] = useState<GeneratedImage[]>([])
+
+  const [credits, setCredits] = useState<number | null>(null)
+  const [totalGenerated, setTotalGenerated] = useState<number | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const [selectedPresets, setSelectedPresets] = useState<Partial<Record<CharacterPresetCategory, CharacterPresetItem | undefined>>>({})
   const characterConfig = CHARACTER_CONFIG[selectedCharacter]
@@ -81,6 +90,38 @@ export default function StudioPage() {
     setGenerationElapsedSeconds(null)
   }, [isGenerating])
 
+  useEffect(() => {
+    if (!creditData) return
+    setCredits(creditData.credits)
+    setTotalGenerated(creditData.totalGenerated)
+    setIsAdmin(creditData.isAdmin)
+  }, [creditData])
+
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const res = await fetch("/api/images/history", { cache: "no-store" })
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`)
+        }
+        const json = (await res.json()) as { images?: GeneratedImage[] }
+        if (Array.isArray(json.images) && json.images.length > 0) {
+          const sorted = [...json.images].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+          setHistory(sorted)
+          setGeneratedImage((prev) => prev ?? sorted[0]?.imagePath)
+          setLastDescription((prev) => prev ?? sorted[0]?.description ?? null)
+        }
+      } catch (error) {
+        console.error("[studio] Failed to load history", error)
+      }
+    }
+
+    void loadHistory()
+  }, [])
+
   const formatSeconds = (value: number) => (value >= 10 ? `${Math.round(value)}s` : `${value.toFixed(1)}s`)
 
   const [prompt, setPrompt] = useState<Prompt>({
@@ -94,6 +135,12 @@ export default function StudioPage() {
       try {
         setLastDescription(null)
         setGenerationError(null)
+
+        if (credits !== null && credits <= 0) {
+          setGenerationError("Voce nao tem creditos suficientes. Peca ao administrador para liberar mais creditos.")
+          return
+        }
+
         setIsGenerating(true)
         setGenerationProgress(10)
 
@@ -123,7 +170,7 @@ export default function StudioPage() {
           body: JSON.stringify(payload),
         })
 
-        const data: { images?: GeneratedImage[]; description?: string; error?: string } = await res.json()
+        const data: { images?: GeneratedImage[]; description?: string; error?: string; credits?: number; totalGenerated?: number } = await res.json()
 
         if (!res.ok || data.error) {
           throw new Error(data.error || "Image generation failed")
@@ -146,7 +193,18 @@ export default function StudioPage() {
         } else {
           setLastDescription(data.description ?? null)
         }
+
+        if (typeof data.credits === "number") {
+          setCredits(data.credits)
+        } else {
+          void refetchCredits()
+        }
+
+        if (typeof data.totalGenerated === "number") {
+          setTotalGenerated(data.totalGenerated)
+        }
       } catch (error) {
+        void refetchCredits()
         const message = error instanceof Error ? error.message : "Unexpected error"
         console.error(error)
         setGenerationError(message)
@@ -236,6 +294,10 @@ export default function StudioPage() {
         onGenerate={handleGenerate}
         onExport={handleExport}
         onShare={handleShare}
+        credits={credits}
+        totalGenerated={totalGenerated}
+        isAdmin={isAdmin}
+        onManageCredits={() => router.push("/admin/credits")}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -293,7 +355,7 @@ export default function StudioPage() {
                 }}
               />
             </div>
-            <Button onClick={handleGenerate} className="gap-2" disabled={isGenerating}>
+            <Button onClick={handleGenerate} className="gap-2" disabled={isGenerating || (credits !== null && credits <= 0)}>
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />

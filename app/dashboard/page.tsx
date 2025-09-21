@@ -1,15 +1,23 @@
 "use client";
 
+import Link from "next/link";
+import { Lock } from "lucide-react";
+
 import { useSession } from "@/lib/auth-client";
 import { UserProfile } from "@/components/auth/user-profile";
 import { Button } from "@/components/ui/button";
-import { Lock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useDiagnostics } from "@/hooks/use-diagnostics";
-import Link from "next/link";
+import { useCredits } from "@/hooks/use-credits";
 
 export default function DashboardPage() {
   const { data: session, isPending } = useSession();
   const { isAiReady, loading: diagnosticsLoading } = useDiagnostics();
+  const {
+    data: creditsData,
+    loading: creditsLoading,
+    error: creditsError,
+  } = useCredits();
 
   if (isPending) {
     return (
@@ -42,14 +50,14 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold">Dashboard</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 border border-border rounded-lg">
           <h2 className="text-xl font-semibold mb-2">AI Chat</h2>
           <p className="text-muted-foreground mb-4">
             Start a conversation with AI using the Vercel AI SDK
           </p>
-          {(diagnosticsLoading || !isAiReady) ? (
-            <Button disabled={true}>
+          {diagnosticsLoading || !isAiReady ? (
+            <Button disabled>
               Go to Chat
             </Button>
           ) : (
@@ -72,6 +80,31 @@ export default function DashboardPage() {
               <strong>Email:</strong> {session.user.email}
             </p>
           </div>
+        </div>
+
+        <div className="p-6 border border-border rounded-lg">
+          <h2 className="text-xl font-semibold mb-2">Creditos</h2>
+          <p className="text-muted-foreground mb-4">
+            Acompanhe seus creditos disponiveis para gerar novas imagens.
+          </p>
+          <div className="flex flex-col gap-2 mb-4">
+            <Badge variant="secondary" className="w-fit text-xs px-2 py-1">
+              Creditos: {creditsLoading ? "carregando..." : creditsData?.credits ?? "-"}
+            </Badge>
+            <Badge variant="outline" className="w-fit text-xs px-2 py-1">
+              Geradas: {creditsLoading ? "carregando..." : creditsData?.totalGenerated ?? 0}
+            </Badge>
+            {creditsError && (
+              <span className="text-xs text-destructive">
+                Nao foi possivel carregar os creditos ({creditsError})
+              </span>
+            )}
+          </div>
+          {creditsData?.isAdmin && (
+            <Button asChild>
+              <Link href="/admin/credits">Gerenciar creditos</Link>
+            </Button>
+          )}
         </div>
       </div>
     </div>

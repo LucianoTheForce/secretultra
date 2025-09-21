@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React from "react"
 import { Download, Share2, Loader2 } from "lucide-react"
@@ -19,6 +19,10 @@ interface TopBarProps {
   onGenerate: () => void
   onExport: () => void
   onShare: () => void
+  credits: number | null
+  totalGenerated?: number | null
+  isAdmin?: boolean
+  onManageCredits?: () => void
   className?: string
 }
 
@@ -28,9 +32,15 @@ export function TopBar({
   lastGenerationDurationSeconds,
   onExport,
   onShare,
+  credits,
+  totalGenerated,
+  isAdmin,
+  onManageCredits,
   className,
 }: TopBarProps) {
   const formatSeconds = (value: number) => (value >= 10 ? `${Math.round(value)}s` : `${value.toFixed(1)}s`)
+  const creditsLabel = credits === null ? "Carregando creditos" : `${credits} creditos`
+  const totalGeneratedLabel = typeof totalGenerated === "number" ? `Geradas ${totalGenerated}` : null
 
   return (
     <div
@@ -54,7 +64,7 @@ export function TopBar({
         {isGenerating ? (
           <Badge variant="outline" className="flex items-center gap-1 text-[10px] px-1.5 py-0.5">
             <Loader2 className="h-3 w-3 animate-spin" />
-            {`Generating ${formatSeconds((generationElapsedSeconds ?? 0))}`}
+            {`Generating ${formatSeconds(generationElapsedSeconds ?? 0)}`}
           </Badge>
         ) : lastGenerationDurationSeconds !== null ? (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
@@ -86,7 +96,15 @@ export function TopBar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">42 credits</Badge>
+        <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">{creditsLabel}</Badge>
+        {totalGeneratedLabel && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">{totalGeneratedLabel}</Badge>
+        )}
+        {isAdmin && onManageCredits && (
+          <Button variant="outline" size="sm" onClick={onManageCredits}>
+            Gerenciar creditos
+          </Button>
+        )}
         <ModeToggle />
         <UserProfile />
       </div>

@@ -19,7 +19,7 @@ export function SignInButton() {
       onClick={async () => {
         await signIn.social({
           provider: "google",
-          callbackURL: "/dashboard",
+          callbackURL: "/studio",
         });
       }}
     >
@@ -27,3 +27,7 @@ export function SignInButton() {
     </Button>
   );
 }
+
+
+
+

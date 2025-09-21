@@ -4,8 +4,19 @@ import { desc, eq } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { generatedImages } from "@/lib/schema"
+import { PUBLIC_IMAGE_ENGINE_NAME } from "@/lib/constants"
 
 export const runtime = "nodejs"
+
+function sanitizeModelMentions(input?: string | null): string | null {
+  if (input == null) {
+    return null
+  }
+
+  return input
+    .replace(/google\s+generative\s+ai/gi, "image engine")
+    .replace(/gemini/gi, "image engine")
+}
 
 export async function GET(req: Request) {
   try {
@@ -32,7 +43,13 @@ export async function GET(req: Request) {
       .limit(50)
 
     const images = records.map((record) => ({
-      ...record,
+      id: record.id,
+      prompt: record.prompt,
+      description: sanitizeModelMentions(record.description ?? null),
+      imagePath: record.imagePath,
+      model: PUBLIC_IMAGE_ENGINE_NAME,
+      aspectRatio: record.aspectRatio,
+      seed: record.seed,
       createdAt: record.createdAt?.toISOString() ?? new Date().toISOString(),
     }))
 
@@ -42,3 +59,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ images: [] }, { status: 500 })
   }
 }
+
+
+

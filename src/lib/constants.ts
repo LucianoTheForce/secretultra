@@ -203,3 +203,5 @@ export const CREDIT_COSTS = {
   animation: 50,
 }
 
+export const PUBLIC_IMAGE_ENGINE_NAME = "Ultragaz Studio Engine";
+
