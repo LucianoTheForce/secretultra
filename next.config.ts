@@ -21,14 +21,14 @@ function imageKitRemotePattern() {
 
 const remotePatterns = [
   {
-    protocol: "https",
+    protocol: "https" as const,
     hostname: "ik.imagekit.io",
     pathname: "/**",
   },
-].filter(Boolean) as NonNullable<NextConfig["images"]>["remotePatterns"];
+];
 
 const dynamicPattern = imageKitRemotePattern();
-if (dynamicPattern) {
+if (dynamicPattern && remotePatterns) {
   const exists = remotePatterns.some(
     (pattern) =>
       pattern.hostname === dynamicPattern.hostname &&
