@@ -96,7 +96,7 @@ export default function StudioPage() {
   const characterConfig = CHARACTER_CONFIG[selectedCharacter]
 
   const generationStartRef = useRef<number | null>(null)
-  const generationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const generationTimerRef = useRef<NodeJS.Timeout | number | null>(null)
   const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState<number | null>(null)
   const [lastGenerationDurationSeconds, setLastGenerationDurationSeconds] = useState<number | null>(null)
 
