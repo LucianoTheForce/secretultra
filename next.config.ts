@@ -9,7 +9,7 @@ function imageKitRemotePattern() {
     const protocol = parsed.protocol.replace(":", "") as "http" | "https";
     const pathname = parsed.pathname.replace(/\/+$/, "");
     return {
-      protocol,
+      protocol: protocol as "https",  // Cast to "https" for type compatibility
       hostname: parsed.hostname,
       pathname: `${pathname.length > 0 ? pathname : ''}/**` || "/**",
     };
@@ -19,9 +19,13 @@ function imageKitRemotePattern() {
   }
 }
 
-const remotePatterns = [
+const remotePatterns: Array<{
+  protocol: "http" | "https";
+  hostname: string;
+  pathname: string;
+}> = [
   {
-    protocol: "https" as const,
+    protocol: "https",
     hostname: "ik.imagekit.io",
     pathname: "/**",
   },
