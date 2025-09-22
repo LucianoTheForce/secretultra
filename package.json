@@ -41,7 +41,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "drizzle-orm": "^0.44.4",
-    "framer-motion": "^12.23.14",
+    "framer-motion": "^12.23.18",
     "imagekit": "^6.0.0",
     "lucide-react": "^0.539.0",
     "next": "15.4.6",

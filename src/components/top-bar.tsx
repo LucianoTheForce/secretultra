@@ -52,8 +52,7 @@ export function TopBar({
       {/* Left Section - Brand only */}
       <div className="flex items-center space-x-1">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/ultragaz-logo.png" alt="ultragaz" className="w-9 h-9" />
-        <span className="text-xs font-medium">ultragaz</span>
+        <img src="/marca_completa_RGB_negativo.png" alt="ultragaz" className="h-7 w-auto" />
       </div>
 
       {/* Center spacer */}

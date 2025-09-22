@@ -23,7 +23,7 @@ This app uses the Vercel AI SDK with Google's Gemini 2.5 Flash Image Preview mod
 - **Client** (`app/studio/page.tsx`)
   - Loads `/api/images/history` on mount to backfill the gallery and defaults the canvas to the newest saved image.
   - After each generation it merges the returned records into local history, ensuring no duplicates and keeping most recent first.
-  - Selecting a thumbnail updates the canvas and the “Model notes” panel with the stored description.
+  - Selecting a thumbnail updates the canvas and the ï¿½Model notesï¿½ panel with the stored description.
 
 ## Environment variables
 Add the following keys to `.env.local` (see `env.example` for the template):
@@ -66,3 +66,4 @@ It will create the `generated_image` table and associated indexes.
 - `personGeneration` defaults to `allow_all` so the model can create characters freely.
 - If the model returns no image the API responds with HTTP 502 and surfaces the text response as the error message.
 - Persisted metadata exposes `prompt`, `description`, `model`, `aspectRatio`, `seed`, and timestamps, enabling future analytics or credit tracking.
+

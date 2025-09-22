@@ -19,8 +19,7 @@ export function SiteHeader() {
         {/* Left: Brand + Tabs */}
         <div className="flex items-center gap-4">
           <Link href="/studio" className="flex items-center gap-2">
-            <Image src="/ultragaz-logo.png" alt="ultragaz" width={24} height={24} />
-            <span className="font-semibold">ultragaz</span>
+            <Image src="/marca_completa_RGB_negativo.png" alt="ultragaz" width={120} height={30} />
           </Link>
         </div>
 

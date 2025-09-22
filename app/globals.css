@@ -114,4 +114,41 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Custom scrollbar styles - vertical only, horizontal hidden */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 0px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: rgba(60, 60, 60, 0.3);
+    border-radius: 2px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(60, 60, 60, 0.5);
+  }
+  
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(60, 60, 60, 0.3) transparent;
+  }
+  
+  /* Hide horizontal scrollbars completely */
+  .overflow-x-auto::-webkit-scrollbar,
+  .overflow-x-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .overflow-x-auto,
+  .overflow-x-scroll {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 }
