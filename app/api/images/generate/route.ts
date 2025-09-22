@@ -3,7 +3,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText, type CoreMessage, type ImagePart, type TextPart } from "ai";
-import type { SharedV2ProviderOptions } from "@ai-sdk/provider";
+
 import { and, eq, gte, sql } from "drizzle-orm";
 
 import { auth } from "@/lib/auth";
@@ -189,7 +189,7 @@ export async function POST(req: Request) {
 
     const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nAlways return a detailed written description alongside the generated imagery.`;
 
-    const providerOptions: SharedV2ProviderOptions = {
+    const providerOptions = {
       google: {
         responseModalities: ["IMAGE", "TEXT"],
         ...(body.aspectRatio ? { aspectRatio: body.aspectRatio } : {}),
