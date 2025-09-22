@@ -19,26 +19,31 @@ import Link from "next/link"
 // Header component - exactly like reference with interface blue
 function Header({ onLoginClick }: { onLoginClick: () => void }) {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <div className="flex items-center">
-          <Image
-            src="/ug-logo.png"
-            alt="Ultragaz"
-            width={140}
-            height={40}
-            className="h-10 w-auto"
-          />
-        </div>
+    <header className="fixed top-6 left-0 right-0 z-50">
+      <div className="container mx-auto px-6">
+        <div className="mx-auto max-w-4xl">
+          <div className="flex h-12 items-center justify-between rounded-full bg-neutral-800/95 backdrop-blur-sm px-6 shadow-lg">
+            {/* Left: Logo */}
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/marca_completa_RGB_negativo.png"
+                alt="Ultragaz"
+                width={100}
+                height={25}
+                priority
+                className="select-none"
+              />
+            </Link>
 
-        {/* Login button with interface purple/blue */}
-        <button
-          onClick={onLoginClick}
-          className="px-6 py-2 bg-[#5b3ef8] text-white rounded-lg hover:bg-[#6b4ef8] transition-all text-sm font-medium"
-        >
-          Entrar
-        </button>
+            {/* Right: Login button with blue background */}
+            <button
+              onClick={onLoginClick}
+              className="px-5 py-1.5 text-sm font-medium text-white bg-[#5b3ef8] hover:bg-[#6b4ef8] rounded-full transition-all"
+            >
+              Entrar
+            </button>
+          </div>
+        </div>
       </div>
     </header>
   )
@@ -277,16 +282,82 @@ export default function WelcomePage() {
   const slides = useMemo(
     () => [
       {
-        image: "/presets/ultrinho/reference-main.png",
-        text: "Crie carrosséis e vídeos com IA no GenID",
+        text: "Ultrinho acenando na cozinha moderna",  // 1.png
       },
       {
-        image: "/presets/ultrinho/pose-energia.jpg",
-        text: "Gere textos, roteiros e artes que performam nas redes",
+        text: "Ultrinho com polegar levantado e chamas",  // 3.png
       },
       {
-        image: "/presets/ultrinho/scenario-parque.jpg",
-        text: "Publique mais rápido com templates e arrastar-e-soltar",
+        text: "Ultrinho piscando close-up",  // 4.png
+      },
+      {
+        text: "Ultrinho acenando em fundo azul",  // 5.png
+      },
+      {
+        text: "Ultrinho com famílias em balões de pensamento",  // 6.png
+      },
+      {
+        text: "Ultrinho pensando em fogão e panela",  // 7.png
+      },
+      {
+        text: "Ultrinho sentado na sala com sofá bege",  // 8.png
+      },
+      {
+        text: "Ultrinho surfista com prancha e chapéu",  // 005562b9
+      },
+      {
+        text: "Ultrinho fazendo yoga no Rio",  // 0528068e
+      },
+      {
+        text: "Ultrinho em faixa de pedestres urbana",  // 065c88b9
+      },
+      {
+        text: "Ultrinho meditando com vista do Rio",  // 1731bff7
+      },
+      {
+        text: "Ultrinho jogando futebol no estádio",  // 22f28cf0
+      },
+      {
+        text: "Ultrinho na praia com óculos escuros",  // 3ac94781
+      },
+      {
+        text: "Ultrinho na discoteca com corrente dourada",  // 49c0523f
+      },
+      {
+        text: "Ultrinho professor com lápis e quadro",  // 6bdecab1
+      },
+      {
+        text: "Ultrinho em festa junina com chapéu",  // 7c4ec3a4
+      },
+      {
+        text: "Ultrinho acenando na cozinha branca",  // 8678e62f
+      },
+      {
+        text: "Ultrinho no campo com luzes e short",  // 9060983f
+      },
+      {
+        text: "Ultrinho na fazenda com celeiro vermelho",  // 9937ade7
+      },
+      {
+        text: "Ultrinho com mulher de vestido preto",  // b1a11960
+      },
+      {
+        text: "Ultrinho com pessoa de moletom verde",  // ba004d8e
+      },
+      {
+        text: "Ultrinho meditando ao pôr do sol",  // c3d66f77
+      },
+      {
+        text: "Ultrinho hip-hop com óculos no palco",  // cb502368
+      },
+      {
+        text: "Ultrinho sob luzes festivas dando joinha",  // dcf38b7f
+      },
+      {
+        text: "Ultrinho cowboy com chapéu e laço",  // f837309b
+      },
+      {
+        text: "Três Ultrinhos celebrando com luzes",  // fd3e93cf
       },
     ],
     []
@@ -294,20 +365,32 @@ export default function WelcomePage() {
 
   const backgroundSlides = useMemo(
     () => [
-      { src: "/presets/ultrinho/pose-acenando.png", alt: "poster 1" },
-      { src: "/presets/ultrinho/pose-correndo.png", alt: "poster 2" },
-      { src: "/presets/ultrinho/pose-bracos-levantados.png", alt: "poster 3" },
-      { src: "/presets/ultrinho/pose-sentado.png", alt: "poster 4" },
-      { src: "/presets/ultrinho/pose-energia.jpg", alt: "poster 5" },
-      { src: "/presets/ultrinho/pose-brinco.jpg", alt: "poster 6" },
-      { src: "/presets/ultrinho/expression-feliz.jpg", alt: "poster 7" },
-      { src: "/presets/ultrinho/expression-curioso.png", alt: "poster 8" },
-      { src: "/presets/ultrinho/expression-surpreso.jpg", alt: "poster 9" },
-      { src: "/presets/ultrinho/scenario-escola.jpg", alt: "poster 10" },
-      { src: "/presets/ultrinho/scenario-estudio.png", alt: "poster 11" },
-      { src: "/presets/ultrinho/scenario-parque.jpg", alt: "poster 12" },
-      { src: "/presets/ultrinho/reference-main.png", alt: "poster 13" },
-      { src: "/presets/ultrinho/reference-sheet.png", alt: "poster 14" },
+      { src: "/generated/home/1.png", alt: "Ultrinho no posto" },
+      { src: "/generated/home/3.png", alt: "Ultrinho e caminhão" },
+      { src: "/generated/home/4.png", alt: "Ultrinho segurança" },
+      { src: "/generated/home/5.png", alt: "Ultrinho celebrando" },
+      { src: "/generated/home/6.png", alt: "Ultrinho apresentando" },
+      { src: "/generated/home/7.png", alt: "Ultrinho entregador" },
+      { src: "/generated/home/8.png", alt: "Ultrinho técnico" },
+      { src: "/generated/home/005562b9-02d3-4f8c-8feb-a7978d98a9ed.png", alt: "Ultrinho atendente" },
+      { src: "/generated/home/0528068e-aaf3-489c-898b-de9f949dd5df.png", alt: "Ultrinho piloto" },
+      { src: "/generated/home/065c88b9-0bf8-4004-a450-71ad70190d71.png", alt: "Ultrinho" },
+      { src: "/generated/home/1731bff7-cc06-47d9-a352-1480d7c02c05.png", alt: "Ultrinho" },
+      { src: "/generated/home/22f28cf0-0df1-4d4e-b9f8-9a41a74a96ba.png", alt: "Ultrinho" },
+      { src: "/generated/home/3ac94781-50aa-4660-a39d-a363ec7ae883.png", alt: "Ultrinho" },
+      { src: "/generated/home/49c0523f-6c6d-4261-8958-4d9160ff64b5.png", alt: "Ultrinho" },
+      { src: "/generated/home/6bdecab1-fdd9-410f-b50c-3fbb86ed906c.png", alt: "Ultrinho" },
+      { src: "/generated/home/7c4ec3a4-bf31-40bd-892e-d47ff2ef4740.png", alt: "Ultrinho" },
+      { src: "/generated/home/8678e62f-3ef2-4073-819f-056d9fe92568.png", alt: "Ultrinho" },
+      { src: "/generated/home/9060983f-99bc-4222-92c6-fab2be365ede.png", alt: "Ultrinho" },
+      { src: "/generated/home/9937ade7-3242-42d1-b65b-9e666c00793f.png", alt: "Ultrinho app" },
+      { src: "/generated/home/b1a11960-3761-4d05-83a3-9d252aa23644.png", alt: "Ultrinho" },
+      { src: "/generated/home/ba004d8e-0c4c-4a33-9533-cb52c2b8e978.png", alt: "Ultrinho" },
+      { src: "/generated/home/c3d66f77-ee96-4ad2-8f32-a724b733bd4b.png", alt: "Ultrinho" },
+      { src: "/generated/home/cb502368-c5be-4678-a873-ae1f93cb65d4.png", alt: "Ultrinho" },
+      { src: "/generated/home/dcf38b7f-445f-4040-b9e6-9b2ecc844ec0.png", alt: "Ultrinho" },
+      { src: "/generated/home/f837309b-884e-4e9d-a3a1-db8db87199ce.png", alt: "Ultrinho" },
+      { src: "/generated/home/fd3e93cf-16a9-4314-b56d-24882be94bde.png", alt: "Ultrinho" },
     ],
     []
   )
@@ -330,7 +413,7 @@ export default function WelcomePage() {
       <Header onLoginClick={() => setShowLoginModal(true)} />
 
       {/* Main content with padding for header */}
-      <div className="relative min-h-screen pt-16 flex flex-col justify-between items-center text-center px-4">
+      <div className="relative min-h-screen pt-24 flex flex-col justify-between items-center text-center px-4">
         {/* Background cards carousel */}
         <CardsBackgroundCarousel
           slides={backgroundSlides}
@@ -364,7 +447,7 @@ export default function WelcomePage() {
             transition={{ delay: 0.2, duration: 0.8 }}
             className="mx-auto w-full max-w-4xl"
           >
-            <div className="mx-auto rounded-2xl bg-white/95 text-black shadow-xl ring-1 ring-black/5 px-6 py-6 md:px-10 md:py-8">
+            <div className="mx-auto rounded-2xl bg-white/20 backdrop-blur-sm text-white shadow-xl ring-1 ring-white/10 px-6 py-6 md:px-10 md:py-8">
               <div className="text-left md:text-center">
                 <h1 className="font-extrabold tracking-tight text-[2rem] md:text-[3.25rem] leading-[1.1]">
                   <RotatingTypedText

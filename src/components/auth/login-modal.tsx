@@ -41,7 +41,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">
-            Bem-vindo ao Design Buddy
+            Bem-vindo!
           </DialogTitle>
           <DialogDescription className="text-center pt-2">
             Faça login para começar a criar imagens incríveis com IA
