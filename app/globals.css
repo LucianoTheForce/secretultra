@@ -151,4 +151,33 @@
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
+  
+  /* Better Auth modal dark theme override */
+  [data-better-auth] {
+    background-color: #0a0a0f !important;
+  }
+  
+  [data-better-auth] * {
+    background-color: inherit;
+  }
+  
+  [data-better-auth] input,
+  [data-better-auth] button {
+    background-color: #1a1a1f !important;
+    color: white !important;
+    border-color: #2a2a2f !important;
+  }
+  
+  [data-better-auth] button:hover {
+    background-color: #2a2a2f !important;
+  }
+  
+  [data-better-auth] label,
+  [data-better-auth] h1,
+  [data-better-auth] h2,
+  [data-better-auth] h3,
+  [data-better-auth] p,
+  [data-better-auth] span {
+    color: white !important;
+  }
 }

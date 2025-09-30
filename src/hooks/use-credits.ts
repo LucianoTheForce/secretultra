@@ -6,6 +6,7 @@ type CreditsResponse = {
   credits: number;
   totalGenerated: number;
   isAdmin: boolean;
+  hasUnlimitedCredits: boolean;
 };
 
 export function useCredits() {
@@ -49,3 +50,4 @@ export function useCredits() {
     refetch: fetchCredits,
   };
 }
+

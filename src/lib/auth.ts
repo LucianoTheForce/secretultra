@@ -44,10 +44,14 @@ globalThis.fetch = async (input: Parameters<typeof fetch>[0], init?: Parameters<
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const betterAuthUrl = process.env.BETTER_AUTH_URL ?? appUrl;
-const devOrigins = process.env.NODE_ENV !== "production" ? ["http://localhost:3001", "http://192.168.100.11:3000"] : [];
+const devOrigins = ["http://localhost:3000", "http://localhost:3001", "http://192.168.100.11:3000"];
+const productionOrigins = [
+  "https://ultragen.theforce.cc",
+  "https://design-buddy-nano-banana-cx09amemg-lucianos-projects-b0bcbedf.vercel.app"
+];
 const trustedOrigins = Array.from(
   new Set(
-    [betterAuthUrl, appUrl, ...devOrigins]
+    [betterAuthUrl, appUrl, ...devOrigins, ...productionOrigins]
       .filter((value): value is string => typeof value === "string" && value.length > 0)
   )
 );

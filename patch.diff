@@ -1,0 +1,413 @@
+diff --git a/app/welcome/page.tsx b/app/welcome/page.tsx
+--- a/app/welcome/page.tsx
++++ b/app/welcome/page.tsx
+@@
+-import { useEffect, useState, useMemo, useRef } from "react"
++import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+ import { motion } from "framer-motion"
+ import Image from "next/image"
+-import { useRouter } from "next/navigation"
+-import { useSession } from "@/lib/auth-client"
+-import { Button } from "@/components/ui/button"
+-import { LoginModal } from "@/components/auth/login-modal"
+-import { 
+-  ArrowRight,
+-  ChevronLeft,
+-  ChevronRight,
+-  Play,
+-  Pause
+-} from "lucide-react"
++import { useRouter } from "next/navigation"
++import { useSession } from "@/lib/auth-client"
++import { Button } from "@/components/ui/button"
++import { LoginModal } from "@/components/auth/login-modal"
++import {
++  ArrowRight,
++  ChevronLeft,
++  ChevronRight,
++  GaugeCircle,
++  Layers,
++  Pause,
++  Play,
++  Share2,
++  ShieldCheck,
++  Sparkles,
++  Users,
++  Workflow,
++  type LucideIcon,
++} from "lucide-react"
+ import Link from "next/link"
+@@
+ function SponsorButton() {
+   return (
+     <motion.a
+       href="https://theforce.cc"
+       target="_blank"
+@@
+     </motion.a>
+   )
+ }
++
++const FEATURE_HIGHLIGHTS: Array<{
++  icon: LucideIcon
++  title: string
++  description: string
++  bullets: string[]
++}> = [
++  {
++    icon: Sparkles,
++    title: "Geração guiada por IA",
++    description:
++      "Transforme ideias em peças finalizadas com prompts aprovados e ajustes contextuais para cada canal.",
++    bullets: [
++      "Sugestões de copy alinhadas à voz da Ultragaz",
++      "Pré-visualização automática para cada formato",
++    ],
++  },
++  {
++    icon: Layers,
++    title: "Componentes reutilizáveis",
++    description:
++      "Padronize banners, cards e fluxos com bibliotecas centralizadas e tokens de design.",
++    bullets: [
++      "Blocos arrasta-e-solta com versões aprovadas",
++      "Atualizações propagadas para todas as campanhas",
++    ],
++  },
++  {
++    icon: Share2,
++    title: "Publicação omnicanal",
++    description:
++      "Dispare campanhas, landing pages e materiais comerciais direto da plataforma.",
++    bullets: [
++      "Exportação otimizada para social, web e impresso",
++      "Integrações com CRM e canais parceiros",
++    ],
++  },
++  {
++    icon: ShieldCheck,
++    title: "Governança automatizada",
++    description:
++      "Proteja a marca com fluxos de aprovação, permissões e histórico completo de alterações.",
++    bullets: [
++      "Papéis por squad, região e parceiro",
++      "Registros auditáveis em tempo real",
++    ],
++  },
++]
++
++const WORKFLOW_STEPS = [
++  {
++    label: "01",
++    title: "Brief em minutos",
++    description:
++      "Escolha um template ou comece do zero. O GenID coleta objetivos, público e canais em um painel guiado.",
++  },
++  {
++    label: "02",
++    title: "Geração e ajustes",
++    description:
++      "Combine IA com a biblioteca oficial Ultragaz para gerar visuais, textos e variações responsivas.",
++  },
++  {
++    label: "03",
++    title: "Aprovação e entrega",
++    description:
++      "Envie para aprovação, acompanhe comentários em tempo real e publique nos canais certos em poucos cliques.",
++  },
++] as const
++
++const TEAM_ENABLEMENT: Array<{
++  icon: LucideIcon
++  title: string
++  description: string
++}> = [
++  {
++    icon: Users,
++    title: "Squads alinhados",
++    description:
++      "Convide equipes regionais, defina permissões e acompanhe status em um dashboard compartilhado.",
++  },
++  {
++    icon: Workflow,
++    title: "Fluxos inteligentes",
++    description:
++      "Automatize checklists, notificações e aprovações para cada fase do ciclo de criação.",
++  },
++  {
++    icon: GaugeCircle,
++    title: "Medição contínua",
++    description:
++      "Visualize desempenho de materiais, reuso de componentes e economia de tempo em tempo real.",
++  },
++]
++
++const IMPACT_CARDS = [
++  {
++    value: "3x",
++    description: "mais rápido para lançar campanhas regionais com modelos prontos",
++  },
++  {
++    value: "60%",
++    description: "menos retrabalho em ajustes de identidade visual",
++  },
++  {
++    value: "24h",
++    description: "do briefing à publicação com aprovações automatizadas",
++  },
++] as const
++
++function FeatureHighlightsSection({ onLogin }: { onLogin: () => void }) {
++  return (
++    <section className="bg-neutral-950 py-24 text-white">
++      <div className="mx-auto max-w-6xl px-6">
++        <motion.div
++          initial={{ opacity: 0, y: 24 }}
++          whileInView={{ opacity: 1, y: 0 }}
++          transition={{ duration: 0.6 }}
++          viewport={{ once: true, margin: "-160px" }}
++          className="mx-auto max-w-3xl text-center"
++        >
++          <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/40">Funcionalidades</span>
++          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
++            Tudo que sua squad precisa para criar com a Ultragaz
++          </h2>
++          <p className="mt-4 text-base text-white/70">
++            Combine geração assistida, bibliotecas oficiais e colaboração em tempo real em um único espaço.
++          </p>
++        </motion.div>
++
++        <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
++          {FEATURE_HIGHLIGHTS.map((feature, index) => {
++            const Icon = feature.icon
++            return (
++              <motion.article
++                key={feature.title}
++                initial={{ opacity: 0, y: 24 }}
++                whileInView={{ opacity: 1, y: 0 }}
++                viewport={{ once: true, margin: "-120px" }}
++                transition={{ duration: 0.4, delay: index * 0.08 }}
++                className="flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_18px_60px_rgba(12,20,38,0.35)] backdrop-blur"
++              >
++                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-200">
++                  <Icon className="h-6 w-6" />
++                </div>
++                <h3 className="mt-6 text-lg font-semibold">{feature.title}</h3>
++                <p className="mt-3 text-sm text-white/70">{feature.description}</p>
++                <ul className="mt-4 space-y-2 text-sm text-white/60">
++                  {feature.bullets.map((bullet) => (
++                    <li key={bullet} className="flex items-start gap-2">
++                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-300" />
++                      <span>{bullet}</span>
++                    </li>
++                  ))}
++                </ul>
++              </motion.article>
++            )
++          })}
++        </div>
++
++        <div className="mt-12 flex justify-center">
++          <Button
++            size="lg"
++            className="rounded-full bg-emerald-500 px-6 text-sm font-semibold text-neutral-950 transition hover:bg-emerald-400"
++            onClick={onLogin}
++          >
++            Experimentar agora
++            <ArrowRight className="ml-2 h-4 w-4" />
++          </Button>
++        </div>
++      </div>
++    </section>
++  )
++}
++
++function WorkflowShowcaseSection() {
++  return (
++    <section className="bg-neutral-900 py-24 text-white">
++      <div className="mx-auto max-w-5xl px-6">
++        <motion.div
++          initial={{ opacity: 0, y: 24 }}
++          whileInView={{ opacity: 1, y: 0 }}
++          transition={{ duration: 0.6 }}
++          viewport={{ once: true, margin: "-140px" }}
++          className="text-center"
++        >
++          <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/40">Workflow</span>
++          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Do briefing à entrega sem sair do GenID</h2>
++          <p className="mt-4 text-base text-white/70">
++            Cada etapa foi desenhada para squads multidisciplinares trabalharem com velocidade e controle.
++          </p>
++        </motion.div>
++
++        <div className="mt-14 grid gap-8 md:grid-cols-3">
++          {WORKFLOW_STEPS.map((step, index) => (
++            <motion.article
++              key={step.title}
++              initial={{ opacity: 0, y: 24 }}
++              whileInView={{ opacity: 1, y: 0 }}
++              viewport={{ once: true, margin: "-80px" }}
++              transition={{ duration: 0.4, delay: index * 0.08 }}
++              className="relative flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur"
++            >
++              <span className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-300/80">{step.label}</span>
++              <h3 className="mt-4 text-xl font-semibold">{step.title}</h3>
++              <p className="mt-3 text-sm text-white/70">{step.description}</p>
++            </motion.article>
++          ))}
++        </div>
++      </div>
++    </section>
++  )
++}
++
++function TeamEnablementSection({ onLogin }: { onLogin: () => void }) {
++  return (
++    <section className="bg-white py-24 text-neutral-900">
++      <div className="mx-auto max-w-6xl px-6">
++        <motion.div
++          initial={{ opacity: 0, y: 24 }}
++          whileInView={{ opacity: 1, y: 0 }}
++          transition={{ duration: 0.6 }}
++          viewport={{ once: true, margin: "-140px" }}
++          className="mx-auto max-w-3xl text-center"
++        >
++          <span className="text-xs font-semibold uppercase tracking-[0.4em] text-neutral-500">Colaboração</span>
++          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
++            A plataforma que conecta marketing, comercial e operações
++          </h2>
++          <p className="mt-4 text-base text-neutral-600">
++            Garanta que todas as áreas trabalhem com o mesmo conteúdo, processos e indicadores, independente da região.
++          </p>
++        </motion.div>
++
++        <div className="mt-14 grid gap-6 md:grid-cols-3">
++          {TEAM_ENABLEMENT.map((card, index) => {
++            const Icon = card.icon
++            return (
++              <motion.article
++                key={card.title}
++                initial={{ opacity: 0, y: 24 }}
++                whileInView={{ opacity: 1, y: 0 }}
++                viewport={{ once: true, margin: "-100px" }}
++                transition={{ duration: 0.4, delay: index * 0.08 }}
++                className="flex h-full flex-col rounded-3xl border border-neutral-200 bg-white p-6 shadow-[0_18px_60px_rgba(12,20,38,0.08)]"
++              >
++                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1c2f5c]/10 text-[#1c2f5c]">
++                  <Icon className="h-6 w-6" />
++                </div>
++                <h3 className="mt-6 text-lg font-semibold text-neutral-900">{card.title}</h3>
++                <p className="mt-3 text-sm text-neutral-600">{card.description}</p>
++              </motion.article>
++            )
++          })}
++        </div>
++
++        <div className="mt-12 grid gap-6 md:grid-cols-3">
++          {IMPACT_CARDS.map((impact) => (
++            <div
++              key={impact.value}
++              className="rounded-3xl border border-neutral-200 bg-neutral-50 px-6 py-8 text-center shadow-sm"
++            >
++              <p className="text-4xl font-bold text-[#1c2f5c]">{impact.value}</p>
++              <p className="mt-3 text-sm text-neutral-600">{impact.description}</p>
++            </div>
++          ))}
++        </div>
++
++        <div className="mt-12 flex justify-center">
++          <Button
++            size="lg"
++            className="rounded-full bg-[#1c2f5c] px-6 text-sm font-semibold text-white hover:bg-[#243974]"
++            onClick={onLogin}
++          >
++            Abrir conta para minha equipe
++            <ArrowRight className="ml-2 h-4 w-4" />
++          </Button>
++        </div>
++      </div>
++    </section>
++  )
++}
++
++function FinalCtaSection({ onLogin }: { onLogin: () => void }) {
++  return (
++    <section className="bg-neutral-950 py-24 text-white">
++      <div className="mx-auto max-w-4xl px-6">
++        <div className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#1f1b38] to-[#0a192f] p-10 text-center shadow-[0_40px_120px_rgba(12,20,38,0.55)]">
++          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Pronto para criar com a Ultragaz?</h2>
++          <p className="mt-4 text-base text-white/70">
++            Acelere campanhas, conecte squads e mantenha a identidade da marca em qualquer canal.
++          </p>
++          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
++            <Button
++              size="lg"
++              className="rounded-full bg-emerald-500 px-6 text-sm font-semibold text-neutral-950 hover:bg-emerald-400"
++              onClick={onLogin}
++            >
++              Criar minha primeira campanha
++              <ArrowRight className="ml-2 h-4 w-4" />
++            </Button>
++            <Button
++              size="lg"
++              variant="outline"
++              className="rounded-full border-white/40 bg-white/5 px-6 text-sm font-semibold text-white hover:bg-white/10"
++              onClick={onLogin}
++            >
++              Falar com um especialista
++            </Button>
++          </div>
++        </div>
++      </div>
++    </section>
++  )
++}
+@@
+-  const go = (dir: -1 | 1) => {
+-    setCurrentIndex((i) => (i + dir + slides.length) % slides.length)
+-  }
++  const go = useCallback(
++    (dir: -1 | 1) => {
++      setCurrentIndex((i) => (i + dir + slides.length) % slides.length)
++    },
++    [slides.length],
++  )
++
++  const handleOpenLogin = useCallback(() => {
++    setShowLoginModal(true)
++  }, [])
+@@
+-      <Header onLoginClick={() => setShowLoginModal(true)} />
++      <Header onLoginClick={handleOpenLogin} />
+@@
+-                <Button
+-                  type="button"
+-                  size="lg"
+-                  className="px-6 h-11 text-base bg-[#6E56CF] hover:bg-[#5d48ba]"
+-                  onClick={() => setShowLoginModal(true)}
+-                >
++                <Button
++                  type="button"
++                  size="lg"
++                  className="px-6 h-11 text-base bg-[#6E56CF] hover:bg-[#5d48ba]"
++                  onClick={handleOpenLogin}
++                >
+@@
+-      {/* Login Modal */}
+-      <LoginModal 
+-        open={showLoginModal} 
+-        onOpenChange={setShowLoginModal}
+-      />
+-    </div>
++      <FeatureHighlightsSection onLogin={handleOpenLogin} />
++      <WorkflowShowcaseSection />
++      <TeamEnablementSection onLogin={handleOpenLogin} />
++      <FinalCtaSection onLogin={handleOpenLogin} />
++
++      <LoginModal
++        open={showLoginModal}
++        onOpenChange={setShowLoginModal}
++      />
++    </>
+   )
+ }

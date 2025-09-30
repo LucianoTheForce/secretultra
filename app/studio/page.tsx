@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { 
@@ -15,7 +15,7 @@ import {
   type CharacterPresetCategory,
   type CharacterPresetItem,
 } from "@/lib/character-presets"
-import { StudioSidebar } from "@/components/studio-sidebar"
+import { StudioSidebar, type StudioNavKey } from "@/components/studio-sidebar"
 import { RightPanel, type FormatOption } from "@/components/right-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -152,6 +152,14 @@ export default function StudioPage() {
     setTotalGenerated(creditData.totalGenerated)
     setIsAdmin(creditData.isAdmin)
   }, [creditData])
+
+  const hasUnlimitedCredits = Boolean(creditData?.hasUnlimitedCredits)
+
+  const handleSidebarSelect = useCallback((key: StudioNavKey) => {
+    if (key === 'my-images') {
+      router.push('/studio/gallery')
+    }
+  }, [router])
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -464,7 +472,12 @@ export default function StudioPage() {
         totalGenerated={totalGenerated}
         isGenerating={isGenerating}
         onNewChat={() => console.info("[studio] New chat requested")}
-        onManageCredits={() => router.push("/admin/credits")}
+        onManageCredits={isAdmin ? () => router.push("/admin/credits") : undefined}
+        activeKey="generate"
+        onSelect={handleSidebarSelect}
+        hasUnlimitedCredits={hasUnlimitedCredits}
+        isAdmin={isAdmin}
+        onAdminNavigate={isAdmin ? () => router.push("/admin") : undefined}
       />
 
       <div className="flex flex-1 overflow-hidden">

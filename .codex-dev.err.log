@@ -1,0 +1,58 @@
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+(node:4^C28) TimeoutNegativeWarning: -3407995.691273111 is a negative number.
+Timeout duration was set to 1.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49028) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+[2m2025-09-29T16:16:14.683Z[0m [31mERROR[0m [1m[Better Auth]:[0m INTERNAL_SERVER_ERROR Error: Failed query: select "id", "expiresAt", "token", "createdAt", "updatedAt", "ipAddress", "userAgent", "userId" from "session" where "session"."token" = $1
+params: XXosWfgOs3T4lXbrs5GLv0NJ2ABNxPxv
+    at async HomePage (app\page.tsx:7:18)
+   5 | export default async function HomePage() {
+   6 |   // Check if user is authenticated
+>  7 |   const session = await auth.api.getSession({
+     |                  ^
+   8 |     headers: await headers(),
+   9 |   })
+  10 | {
+  query: 'select "id", "expiresAt", "token", "createdAt", "updatedAt", "ipAddress", "userAgent", "userId" from "session" where "session"."token" = $1',
+  params: [Array],
+  [cause]: [Error: getaddrinfo ENOTFOUND ep-sparkling-mountain-ac65v6q3-pooler.sa-east-1.aws.neon.tech] {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'ep-sparkling-mountain-ac65v6q3-pooler.sa-east-1.aws.neon.tech'
+  }
+}
+ ⨯ [Error [APIError]: Failed to get session] {
+  status: 'INTERNAL_SERVER_ERROR',
+  body: [Object],
+  headers: {},
+  statusCode: 500,
+  digest: '3142529621'
+}
+[2m2025-09-29T16:16:15.373Z[0m [31mERROR[0m [1m[Better Auth]:[0m INTERNAL_SERVER_ERROR Error: Failed query: select "id", "expiresAt", "token", "createdAt", "updatedAt", "ipAddress", "userAgent", "userId" from "session" where "session"."token" = $1
+params: XXosWfgOs3T4lXbrs5GLv0NJ2ABNxPxv
+    at async HomePage (app\page.tsx:7:18)
+   5 | export default async function HomePage() {
+   6 |   // Check if user is authenticated
+>  7 |   const session = await auth.api.getSession({
+     |                  ^
+   8 |     headers: await headers(),
+   9 |   })
+  10 | {
+  query: 'select "id", "expiresAt", "token", "createdAt", "updatedAt", "ipAddress", "userAgent", "userId" from "session" where "session"."token" = $1',
+  params: [Array],
+  [cause]: [Error: getaddrinfo ENOTFOUND ep-sparkling-mountain-ac65v6q3-pooler.sa-east-1.aws.neon.tech] {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'ep-sparkling-mountain-ac65v6q3-pooler.sa-east-1.aws.neon.tech'
+  }
+}
+ ⨯ [Error [APIError]: Failed to get session] {
+  status: 'INTERNAL_SERVER_ERROR',
+  body: [Object],
+  headers: {},
+  statusCode: 500,
+  digest: '3142529621'
+}
+^C

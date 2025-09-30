@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { useCredits } from "@/hooks/use-credits";
@@ -37,7 +38,7 @@ export default function AdminCreditsPage() {
       setUsers(json.users);
       setEditValues(Object.fromEntries(json.users.map((user) => [user.id, user.credits])));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao carregar usuários");
+      setError(err instanceof Error ? err.message : "Falha ao carregar usu\u00e1rios");
     } finally {
       setLoading(false);
     }
@@ -52,7 +53,7 @@ export default function AdminCreditsPage() {
   const handleUpdateCredits = async (userId: string) => {
     const value = editValues[userId];
     if (value === undefined || Number.isNaN(value) || value < 0) {
-      setError("Informe um número válido de créditos");
+      setError("Informe um n\u00famero v\u00e1lido de cr\u00e9ditos");
       return;
     }
 
@@ -70,7 +71,7 @@ export default function AdminCreditsPage() {
 
       await fetchUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao atualizar créditos");
+      setError(err instanceof Error ? err.message : "Falha ao atualizar cr\u00e9ditos");
     }
   };
 
@@ -86,7 +87,7 @@ export default function AdminCreditsPage() {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h1 className="text-2xl font-bold mb-2">Acesso restrito</h1>
-        <p className="text-muted-foreground">Faça login para acessar o painel administrativo.</p>
+        <p className="text-muted-foreground">Fa\u00e7a login para acessar o painel administrativo.</p>
       </div>
     );
   }
@@ -94,8 +95,8 @@ export default function AdminCreditsPage() {
   if (creditsData && !creditsData.isAdmin) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <h1 className="text-2xl font-bold mb-2">Sem permissão</h1>
-        <p className="text-muted-foreground">Sua conta não possui acesso administrativo.</p>
+        <h1 className="text-2xl font-bold mb-2">Sem permiss\u00e3o</h1>
+        <p className="text-muted-foreground">Sua conta n\u00e3o possui acesso administrativo.</p>
       </div>
     );
   }
@@ -104,15 +105,18 @@ export default function AdminCreditsPage() {
     <div className="container mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Gerenciamento de créditos</h1>
-          <p className="text-muted-foreground">Conceda ou ajuste créditos de geração para usuários.</p>
+          <h1 className="text-3xl font-bold">Gerenciamento de cr\u00e9ditos</h1>
+          <p className="text-muted-foreground">Conceda ou ajuste cr\u00e9ditos de gera\u00e7\u00e3o para usu\u00e1rios.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 justify-end">
+          <Button asChild variant="outline">
+            <Link href="/admin">Voltar dashboard</Link>
+          </Button>
           <Button variant="outline" onClick={() => fetchUsers()} disabled={loading}>
             Atualizar lista
           </Button>
           <Badge variant="outline" className="text-xs px-2 py-1">
-            Total de usuários: {users.length}
+            Total de usu\u00e1rios: {users.length}
           </Badge>
         </div>
       </div>
@@ -126,11 +130,11 @@ export default function AdminCreditsPage() {
       <div className="grid gap-4">
         {loading ? (
           <div className="rounded-md border border-dashed border-muted-foreground/40 py-10 text-center text-muted-foreground">
-            Carregando usuários...
+            Carregando usu\u00e1rios...
           </div>
         ) : users.length === 0 ? (
           <div className="rounded-md border border-dashed border-muted-foreground/40 py-10 text-center text-muted-foreground">
-            Nenhum usuário encontrado.
+            Nenhum usu\u00e1rio encontrado.
           </div>
         ) : (
           users.map((userItem) => {
@@ -139,12 +143,12 @@ export default function AdminCreditsPage() {
               <Card key={userItem.id}>
                 <CardHeader className="flex flex-row items-start justify-between gap-4">
                   <div>
-                    <CardTitle className="text-base font-semibold">{userItem.name ?? "Usuário sem nome"}</CardTitle>
+                    <CardTitle className="text-base font-semibold">{userItem.name ?? "Usu\u00e1rio sem nome"}</CardTitle>
                     <p className="text-xs text-muted-foreground">{userItem.email ?? "sem email"}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={userItem.isAdmin ? "default" : "outline"} className="text-xs">
-                      {userItem.isAdmin ? "Admin" : "Usuário"}
+                      {userItem.isAdmin ? "Admin" : "Usu\u00e1rio"}
                     </Badge>
                     <Badge variant="outline" className="text-xs">
                       {userItem.totalGenerated} geradas
@@ -162,7 +166,7 @@ export default function AdminCreditsPage() {
                         setEditValues((prev) => ({ ...prev, [userItem.id]: Number(event.target.value) }))
                       }
                     />
-                    <span className="text-sm text-muted-foreground">créditos</span>
+                    <span className="text-sm text-muted-foreground">cr\u00e9ditos</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -188,7 +192,7 @@ export default function AdminCreditsPage() {
                       onClick={() => handleUpdateCredits(userItem.id)}
                       disabled={loading}
                     >
-                      Salvar créditos
+                      Salvar cr\u00e9ditos
                     </Button>
                   </div>
                 </CardContent>
@@ -200,4 +204,3 @@ export default function AdminCreditsPage() {
     </div>
   );
 }
-

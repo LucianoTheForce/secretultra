@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import React from "react"
 import { Download, Share2, Loader2 } from "lucide-react"
@@ -22,6 +22,7 @@ interface TopBarProps {
   credits: number | null
   totalGenerated?: number | null
   isAdmin?: boolean
+  hasUnlimitedCredits?: boolean
   onManageCredits?: () => void
   className?: string
 }
@@ -35,11 +36,16 @@ export function TopBar({
   credits,
   totalGenerated,
   isAdmin,
+  hasUnlimitedCredits,
   onManageCredits,
   className,
 }: TopBarProps) {
   const formatSeconds = (value: number) => (value >= 10 ? `${Math.round(value)}s` : `${value.toFixed(1)}s`)
-  const creditsLabel = credits === null ? "Carregando creditos" : `${credits} creditos`
+  const creditsLabel = hasUnlimitedCredits
+    ? "Creditos ilimitados"
+    : credits === null
+      ? "Carregando creditos"
+      : `${credits} creditos`
   const totalGeneratedLabel = typeof totalGenerated === "number" ? `Geradas ${totalGenerated}` : null
 
   return (
@@ -110,3 +116,4 @@ export function TopBar({
     </div>
   )
 }
+

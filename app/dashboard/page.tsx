@@ -19,6 +19,13 @@ export default function DashboardPage() {
     error: creditsError,
   } = useCredits();
 
+  const creditsLabel = creditsLoading
+    ? "carregando..."
+    : creditsData?.hasUnlimitedCredits
+      ? "ilimitados"
+      : creditsData?.credits ?? "-"
+
+
   if (isPending) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -89,7 +96,7 @@ export default function DashboardPage() {
           </p>
           <div className="flex flex-col gap-2 mb-4">
             <Badge variant="secondary" className="w-fit text-xs px-2 py-1">
-              Creditos: {creditsLoading ? "carregando..." : creditsData?.credits ?? "-"}
+              Creditos: {creditsLabel}
             </Badge>
             <Badge variant="outline" className="w-fit text-xs px-2 py-1">
               Geradas: {creditsLoading ? "carregando..." : creditsData?.totalGenerated ?? 0}
@@ -110,3 +117,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

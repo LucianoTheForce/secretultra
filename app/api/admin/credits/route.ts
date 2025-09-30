@@ -4,20 +4,13 @@ import { eq, sql } from "drizzle-orm"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { generatedImages, user } from "@/lib/schema"
-
-function envAdminEmails() {
-  const raw = process.env.ADMIN_EMAILS || ""
-  return raw
-    .split(",")
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean)
-}
+import { hasAdminAccess, isMasterAdminEmail } from "@/lib/master-admin"
 
 async function ensureAdmin(session: Awaited<ReturnType<typeof auth.api.getSession>>) {
   if (!session?.user) return null
 
   const userId = session.user.id
-  const email = session.user.email?.toLowerCase() ?? null
+  const email = session.user.email ?? null
 
   const dbUser = await db
     .select({ id: user.id, credits: user.credits, isAdmin: user.isAdmin, email: user.email })
@@ -32,8 +25,7 @@ async function ensureAdmin(session: Awaited<ReturnType<typeof auth.api.getSessio
     return dbUser
   }
 
-  const admins = envAdminEmails()
-  if (email && admins.includes(email)) {
+  if (hasAdminAccess(email)) {
     await db.update(user).set({ isAdmin: true }).where(eq(user.id, userId))
     return { ...dbUser, isAdmin: true }
   }
@@ -69,6 +61,7 @@ export async function GET(request: Request) {
   const payload = users.map((u) => ({
     ...u,
     totalGenerated: countMap.get(u.id) ?? 0,
+    hasUnlimitedCredits: isMasterAdminEmail(u.email ?? null),
   }))
 
   return NextResponse.json({ users: payload })

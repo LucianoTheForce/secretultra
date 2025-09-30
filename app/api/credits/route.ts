@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm"
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { hasAdminAccess, isMasterAdminEmail } from "@/lib/master-admin"
 import { generatedImages, user } from "@/lib/schema"
 
 export async function GET(request: Request) {
@@ -13,9 +14,10 @@ export async function GET(request: Request) {
   }
 
   const userId = session.user.id
+  const email = session.user.email ?? null
 
   const dbUser = await db
-    .select({ credits: user.credits, isAdmin: user.isAdmin })
+    .select({ credits: user.credits, isAdmin: user.isAdmin, email: user.email })
     .from(user)
     .where(eq(user.id, userId))
     .limit(1)
@@ -24,6 +26,14 @@ export async function GET(request: Request) {
   if (!dbUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 })
   }
+
+  let isAdmin = dbUser.isAdmin
+  if (!isAdmin && hasAdminAccess(email)) {
+    await db.update(user).set({ isAdmin: true }).where(eq(user.id, userId))
+    isAdmin = true
+  }
+
+  const hasUnlimitedCredits = isMasterAdminEmail(email)
 
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)` })
@@ -34,6 +44,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     credits: dbUser.credits,
     totalGenerated: Number(count ?? 0),
-    isAdmin: dbUser.isAdmin,
+    isAdmin,
+    hasUnlimitedCredits,
   })
 }

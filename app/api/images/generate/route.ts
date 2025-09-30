@@ -8,6 +8,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { hasAdminAccess, isMasterAdminEmail } from "@/lib/master-admin";
 import { generatedImages, user } from "@/lib/schema";
 import { PUBLIC_IMAGE_ENGINE_NAME } from "@/lib/constants";
 import { createImageKitUrl, imageKit, resolveImageKitFolder } from "@/lib/imagekit";
@@ -132,9 +133,10 @@ export async function POST(req: Request) {
     }
 
     const userId = session.user.id;
+    const email = session.user.email ?? null;
 
     const dbUser = await db
-      .select({ credits: user.credits })
+      .select({ credits: user.credits, isAdmin: user.isAdmin, email: user.email })
       .from(user)
       .where(eq(user.id, userId))
       .limit(1)
@@ -143,6 +145,12 @@ export async function POST(req: Request) {
     if (!dbUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    if (!dbUser.isAdmin && hasAdminAccess(email)) {
+      await db.update(user).set({ isAdmin: true }).where(eq(user.id, userId));
+    }
+
+    const isMasterAdmin = isMasterAdminEmail(email);
 
     const body = (await req.json()) as GenerateBody;
     const prompt = body.prompt?.trim();
@@ -273,7 +281,7 @@ export async function POST(req: Request) {
     const sanitizedDescription = sanitizeModelMentions(generation.text ?? null);
     const cost = base64Images.length;
 
-    if (dbUser.credits < cost) {
+    if (!isMasterAdmin && dbUser.credits < cost) {
       return NextResponse.json({ error: INSUFFICIENT_CREDITS_MESSAGE }, { status: 402 });
     }
 
@@ -311,8 +319,55 @@ export async function POST(req: Request) {
       throw uploadError;
     }
 
+    const values = uploads.map((upload) => ({
+      id: upload.id,
+      userId,
+      prompt,
+      description: sanitizedDescription,
+      imagePath: upload.url,
+      model: PUBLIC_IMAGE_ENGINE_RESPONSE,
+      aspectRatio: body.aspectRatio ?? null,
+      seed: seedValue,
+      imageKitFileId: upload.fileId,
+      shareUrl: upload.shareUrl,
+      backgroundRemovedUrl: upload.backgroundRemovedUrl,
+      previewUrl: upload.previewUrl,
+    }));
+
     const { images, remainingCredits, totalGenerated } = await (async () => {
       try {
+        if (isMasterAdmin) {
+          return await db.transaction(async (tx) => {
+            const inserted = await tx.insert(generatedImages).values(values).returning();
+
+            const totalRows = await tx
+              .select({ total: sql<number>`count(*)` })
+              .from(generatedImages)
+              .where(eq(generatedImages.userId, userId));
+
+            const totalGeneratedCount =
+              totalRows.length > 0 ? Number(totalRows[0].total ?? values.length) : values.length;
+
+            return {
+              images: inserted.map((record) => ({
+                id: record.id,
+                prompt: record.prompt,
+                description: sanitizeModelMentions(record.description ?? null),
+                imagePath: record.imagePath,
+                model: PUBLIC_IMAGE_ENGINE_RESPONSE,
+                aspectRatio: record.aspectRatio,
+                seed: record.seed,
+                shareUrl: record.shareUrl,
+                backgroundRemovedUrl: record.backgroundRemovedUrl,
+                previewUrl: record.previewUrl,
+                createdAt: record.createdAt?.toISOString() ?? new Date().toISOString(),
+              })),
+              remainingCredits: dbUser.credits,
+              totalGenerated: totalGeneratedCount,
+            };
+          });
+        }
+
         return await db.transaction(async (tx) => {
           const creditUpdate = await tx
             .update(user)
@@ -324,21 +379,6 @@ export async function POST(req: Request) {
             throw INSUFFICIENT_CREDITS;
           }
 
-          const values = uploads.map((upload) => ({
-            id: upload.id,
-            userId,
-            prompt,
-            description: sanitizedDescription,
-            imagePath: upload.url,
-            model: PUBLIC_IMAGE_ENGINE_RESPONSE,
-            aspectRatio: body.aspectRatio ?? null,
-            seed: seedValue,
-            imageKitFileId: upload.fileId,
-            shareUrl: upload.shareUrl,
-            backgroundRemovedUrl: upload.backgroundRemovedUrl,
-            previewUrl: upload.previewUrl,
-          }));
-
           const inserted = await tx.insert(generatedImages).values(values).returning();
 
           const totalRows = await tx
@@ -346,7 +386,7 @@ export async function POST(req: Request) {
             .from(generatedImages)
             .where(eq(generatedImages.userId, userId));
 
-          const totalGenerated = totalRows.length > 0 ? Number(totalRows[0].total ?? 0) : values.length;
+          const totalGenerated = totalRows.length > 0 ? Number(totalRows[0].total ?? values.length) : values.length;
 
           return {
             images: inserted.map((record) => ({
@@ -368,7 +408,7 @@ export async function POST(req: Request) {
         });
       } catch (dbError) {
         await Promise.all(
-          uploads.map((item) => imageKit.deleteFile(item.fileId).catch(() => {}))
+          uploads.map((item) => imageKit.deleteFile(item.fileId).catch(() => {})),
         );
         throw dbError;
       }
@@ -380,7 +420,9 @@ export async function POST(req: Request) {
       model: PUBLIC_IMAGE_ENGINE_RESPONSE,
       credits: remainingCredits,
       totalGenerated,
+      hasUnlimitedCredits: isMasterAdmin,
     });
+
   } catch (error) {
     if (error === INSUFFICIENT_CREDITS) {
       return NextResponse.json({ error: INSUFFICIENT_CREDITS_MESSAGE }, { status: 402 });
