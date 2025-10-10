@@ -197,3 +197,142 @@ After completing the implementation, you MUST document any new features or signi
 This documentation helps maintain the project and assists future developers working with the codebase.
 
 Think hard about the solution and implementing the user's requirements.
+
+# Nano Banana
+
+> Google's state-of-the-art image generation and editing model
+
+## Overview
+- **Endpoint**: `https://fal.run/fal-ai/nano-banana/edit`
+- **Model ID**: `fal-ai/nano-banana/edit`
+- **Category**: image-to-image
+- **Kind**: inference
+- **Tags**: image-editing
+
+## API Information
+This model offers both HTTP and client library interfaces. Use the following schemas and examples to integrate it into the application.
+
+### Input Schema
+- **`prompt`** (`string`, required): Text instructions for the edit. Example: "make a photo of the man driving the car down the california coastline".
+- **`image_urls`** (`list<string>`, required): Source images to edit. Example: `["https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input.png"]`.
+- **`num_images`** (`integer`, optional): How many variations to return. Default: `1`, range `1-4`.
+- **`output_format`** (`"jpeg" | "png"`, optional): Image format. Default: `"jpeg"`.
+- **`sync_mode`** (`boolean`, optional): When `true`, returns images as data URIs and skips request history persistence. Default: `false`.
+
+#### Required Parameters Example
+```json
+{
+  "prompt": "make a photo of the man driving the car down the california coastline",
+  "image_urls": [
+    "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input.png",
+    "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input-2.png"
+  ]
+}
+```
+
+#### Full Example
+```json
+{
+  "prompt": "make a photo of the man driving the car down the california coastline",
+  "image_urls": [
+    "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input.png",
+    "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input-2.png"
+  ],
+  "num_images": 1,
+  "output_format": "jpeg"
+}
+```
+
+### Output Schema
+- **`images`** (`list<File>`, required): Array of edited image assets. Example: `[{"url":"https://storage.googleapis.com/falserverless/example_outputs/nano-banana-multi-edit-output.png"}]`.
+- **`description`** (`string`, required): fal.ai-generated description for the result.
+
+#### Example Response
+```json
+{
+  "images": [
+    {
+      "url": "https://storage.googleapis.com/falserverless/example_outputs/nano-banana-multi-edit-output.png"
+    }
+  ],
+  "description": "Here is a photo of the man driving the car down the California coastline. "
+}
+```
+
+## Usage Examples
+
+### cURL
+```bash
+curl --request POST \
+  --url https://fal.run/fal-ai/nano-banana/edit \
+  --header "Authorization: Key $FAL_KEY" \
+  --header "Content-Type: application/json" \
+  --data '{
+     "prompt": "make a photo of the man driving the car down the california coastline",
+     "image_urls": [
+       "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input.png",
+       "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input-2.png"
+     ]
+   }'
+```
+
+### Python
+Install the client with `pip install fal-client` and then:
+```python
+import fal_client
+
+
+def on_queue_update(update):
+    if isinstance(update, fal_client.InProgress):
+        for log in update.logs:
+            print(log["message"])
+
+
+result = fal_client.subscribe(
+    "fal-ai/nano-banana/edit",
+    arguments={
+        "prompt": "make a photo of the man driving the car down the california coastline",
+        "image_urls": [
+            "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input.png",
+            "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input-2.png"
+        ],
+    },
+    with_logs=True,
+    on_queue_update=on_queue_update,
+)
+print(result)
+```
+
+### JavaScript
+Install the client with `npm install @fal-ai/client` and then:
+```javascript
+import { fal } from "@fal-ai/client";
+
+const result = await fal.subscribe("fal-ai/nano-banana/edit", {
+  input: {
+    prompt: "make a photo of the man driving the car down the california coastline",
+    image_urls: [
+      "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input.png",
+      "https://storage.googleapis.com/falserverless/example_inputs/nano-banana-edit-input-2.png"
+    ]
+  },
+  logs: true,
+  onQueueUpdate: (update) => {
+    if (update.status === "IN_PROGRESS") {
+      update.logs.map((log) => log.message).forEach(console.log);
+    }
+  },
+});
+console.log(result.data);
+console.log(result.requestId);
+```
+
+## Additional Resources
+- [Model Playground](https://fal.ai/models/fal-ai/nano-banana/edit)
+- [API Documentation](https://fal.ai/models/fal-ai/nano-banana/edit/api)
+- [OpenAPI Schema](https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/nano-banana/edit)
+
+## fal.ai Platform
+- [Platform Documentation](https://docs.fal.ai)
+- [Python Client](https://docs.fal.ai/clients/python)
+- [JavaScript Client](https://docs.fal.ai/clients/javascript)

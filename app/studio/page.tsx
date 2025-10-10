@@ -2,11 +2,12 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { KeyboardEvent as ReactKeyboardEvent } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { 
   Loader2, Plus, Sparkles, ChevronUp, ChevronDown,
-  ZoomIn, ZoomOut, Download, Share2, Maximize2, Eraser
+  ZoomIn, ZoomOut, Download, Share2, Maximize2, Eraser, Video as VideoIcon
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { useCredits } from "@/hooks/use-credits"
 import type { CharacterId, GeneratedImage, Prompt } from "@/types"
+import { setVideoStudioSource } from "@/lib/video-bridge"
 
 const PERSON_GENERATION = "allow_all" as const
 
@@ -70,6 +72,8 @@ function formatTimeLabel(value?: string) {
     minute: "2-digit",
   }).format(date)
 }
+const PROMPT_HISTORY_LIMIT = 20
+
 export default function StudioPage() {
   const router = useRouter()
   const { data: creditData, refetch: refetchCredits } = useCredits()
@@ -105,6 +109,9 @@ export default function StudioPage() {
     creativity: 0.7,
     seed: "random",
   })
+  const [promptHistory, setPromptHistory] = useState<string[]>([])
+  const [historyCursor, setHistoryCursor] = useState<number | null>(null)
+  const promptHistoryDraftRef = useRef<string>("")
   const [imageCount, setImageCount] = useState<1 | 2 | 3 | 4>(1)
   const [zoomLevel, setZoomLevel] = useState(1)
 
@@ -153,11 +160,161 @@ export default function StudioPage() {
     setIsAdmin(creditData.isAdmin)
   }, [creditData])
 
+  useEffect(() => {
+    let isMounted = true
+
+    const loadHistory = async () => {
+      try {
+        const response = await fetch('/api/prompt-history', { cache: 'no-store' })
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        const json = (await response.json()) as { prompts?: string[] }
+        if (!isMounted) {
+          return
+        }
+        if (Array.isArray(json.prompts)) {
+          const sanitized = json.prompts
+            .filter((item) => typeof item === 'string' && item.trim().length > 0)
+            .map((item) => item.trim())
+            .slice(0, PROMPT_HISTORY_LIMIT)
+          setPromptHistory(sanitized)
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('[studio] failed to load prompt history', error)
+        }
+      }
+    }
+
+    void loadHistory()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   const hasUnlimitedCredits = Boolean(creditData?.hasUnlimitedCredits)
 
+  const resetPromptHistoryNavigation = useCallback(() => {
+    setHistoryCursor(null)
+    promptHistoryDraftRef.current = ""
+  }, [])
+
+  const recordPrompt = useCallback((rawPrompt: string) => {
+    const trimmed = rawPrompt.trim()
+    if (!trimmed) {
+      return
+    }
+    setPromptHistory((previous) => {
+      const next = [trimmed, ...previous.filter((item) => item !== trimmed)]
+      return next.slice(0, PROMPT_HISTORY_LIMIT)
+    })
+
+    void fetch("/api/prompt-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: trimmed, source: "studio" }),
+    }).catch((error) => {
+      console.error('[studio] failed to persist prompt history', error)
+    })
+  }, [])
+
+  const handlePromptInputChange = useCallback(
+    (value: string) => {
+      setPrompt((prev) => ({ ...prev, text: value }))
+      resetPromptHistoryNavigation()
+    },
+    [resetPromptHistoryNavigation],
+  )
+
+  const handlePromptKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+        return
+      }
+      if (promptHistory.length === 0) {
+        return
+      }
+      event.preventDefault()
+
+      if (event.key === "ArrowUp") {
+        setHistoryCursor((previous) => {
+          const nextCursor = previous === null ? 0 : Math.min(previous + 1, promptHistory.length - 1)
+          if (previous === null) {
+            promptHistoryDraftRef.current = prompt.text
+          }
+          const nextValue = promptHistory[nextCursor] ?? ""
+          setPrompt((prevPrompt) => ({ ...prevPrompt, text: nextValue }))
+          return nextCursor
+        })
+        return
+      }
+
+      setHistoryCursor((previous) => {
+        if (previous === null) {
+          return previous
+        }
+        if (previous > 0) {
+          const nextCursor = previous - 1
+          const nextValue = promptHistory[nextCursor] ?? ""
+          setPrompt((prevPrompt) => ({ ...prevPrompt, text: nextValue }))
+          return nextCursor
+        }
+        setPrompt((prevPrompt) => ({ ...prevPrompt, text: promptHistoryDraftRef.current }))
+        promptHistoryDraftRef.current = ""
+        return null
+      })
+    },
+    [promptHistory, prompt.text],
+  )
+
+  const handleSendImageToVideo = useCallback(
+    (image: GeneratedImage) => {
+      const preferred =
+        (image.shareUrl && !image.shareUrl.includes("localhost:3000/auth")
+          ? image.shareUrl
+          : image.previewUrl && !image.previewUrl.includes("localhost:3000/auth")
+            ? image.previewUrl
+            : image.imagePath) ?? image.imagePath
+      setVideoStudioSource({
+        imageUrl: preferred,
+        previewUrl:
+          image.previewUrl && !image.previewUrl.includes("localhost:3000/auth")
+            ? image.previewUrl
+            : preferred,
+        prompt: image.prompt,
+        description: image.description,
+        model: image.model,
+        id: image.id,
+      })
+      router.push("/studio/videos")
+    },
+    [router],
+  )
+
   const handleSidebarSelect = useCallback((key: StudioNavKey) => {
-    if (key === 'my-images') {
-      router.push('/studio/gallery')
+    if (key === "generate") {
+      return
+    }
+    if (key === "my-images") {
+      router.push("/studio/gallery")
+      return
+    }
+    if (key === "my-videos") {
+      router.push("/studio/videos")
+      return
+    }
+    if (key === "my-stories") {
+      router.push("/studio/stories")
+      return
+    }
+    if (key === "settings") {
+      router.push("/profile")
+      return
+    }
+    if (key === "support") {
+      router.push("/support")
     }
   }, [router])
 
@@ -292,6 +449,9 @@ export default function StudioPage() {
           setLastDescription(data.description ?? null)
         }
 
+        recordPrompt(prompt.text)
+        resetPromptHistoryNavigation()
+
         if (typeof data.credits === "number") {
           setCredits(data.credits)
         } else {
@@ -400,9 +560,12 @@ export default function StudioPage() {
     }
   }, [history, generatedImage])
 
-  const handlePromptChange = (update: Partial<Prompt>) => {
+  const handlePromptChange = useCallback((update: Partial<Prompt>) => {
     setPrompt((prev) => ({ ...prev, ...update }))
-  }
+    if (Object.prototype.hasOwnProperty.call(update, 'text')) {
+      resetPromptHistoryNavigation()
+    }
+  }, [resetPromptHistoryNavigation])
 
   const handleHelperReset = () => {
     setPrompt((prev) => ({ ...prev, seed: "random", creativity: 0.7 }))
@@ -415,10 +578,12 @@ export default function StudioPage() {
       const nextText = trimmed.length === 0 ? helper : `${trimmed}\n${helper}`
       return { ...prev, text: nextText }
     })
+    resetPromptHistoryNavigation()
   }
 
   const handleVariation = (image: GeneratedImage) => {
     setPrompt((prev) => ({ ...prev, text: image.prompt }))
+    resetPromptHistoryNavigation()
   }
 
   const handleUpscale = (image: GeneratedImage) => {
@@ -555,8 +720,12 @@ export default function StudioPage() {
                         <input
                           type="text"
                           value={prompt.text}
-                          onChange={(event) => setPrompt((prev) => ({ ...prev, text: event.target.value }))}
+                          onChange={(event) => handlePromptInputChange(event.target.value)}
                           onKeyDown={(event) => {
+                            handlePromptKeyDown(event)
+                            if (event.defaultPrevented) {
+                              return
+                            }
                             if (event.key === "Enter" && !event.shiftKey) {
                               event.preventDefault()
                               if (!isGenerating && prompt.text.trim()) {
@@ -650,35 +819,59 @@ export default function StudioPage() {
                             }
                           }}
                         >
-                          {history.map((image, index) => (
-                            <button
-                              key={image.id}
-                              data-image-index={index}
-                              onClick={() => {
-                                setSelectedImageIndex(index)
-                                setGeneratedImage(image.imagePath)
-                                setLastDescription(image.description ?? null)
-                                setGenerationError(null)
-                              }}
-                              className={cn(
-                                "relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all hover:scale-105",
-                                selectedImageIndex === index
-                                  ? "border-[#5b3ef8] shadow-lg shadow-[#5b3ef8]/30"
-                                  : "border-transparent hover:border-neutral-600"
-                              )}
-                            >
-                              <Image
-                                src={image.imagePath}
-                                alt={image.prompt}
-                                fill
-                                sizes="80px"
-                                className="object-cover"
-                              />
-                              {selectedImageIndex === index && (
-                                <div className="absolute inset-0 bg-[#5b3ef8]/10 pointer-events-none" />
-                              )}
-                            </button>
-                          ))}
+                          {history.map((image, index) => {
+                            const isActive = selectedImageIndex === index
+                            return (
+                              <div
+                                key={image.id}
+                                data-image-index={index}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => {
+                                  setSelectedImageIndex(index)
+                                  setGeneratedImage(image.imagePath)
+                                  setLastDescription(image.description ?? null)
+                                  setGenerationError(null)
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault()
+                                    setSelectedImageIndex(index)
+                                    setGeneratedImage(image.imagePath)
+                                    setLastDescription(image.description ?? null)
+                                    setGenerationError(null)
+                                  }
+                                }}
+                                className={cn(
+                                  "relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b3ef8]/70",
+                                  isActive
+                                    ? "border-[#5b3ef8] shadow-lg shadow-[#5b3ef8]/30"
+                                    : "border-transparent hover:border-neutral-600",
+                                )}
+                              >
+                                <Image
+                                  src={image.imagePath}
+                                  alt={image.prompt}
+                                  fill
+                                  sizes="80px"
+                                  className="object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleSendImageToVideo(image)
+                                  }}
+                                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-white/40 bg-black/60 text-white/70 shadow-md transition hover:border-[#5b3ef8] hover:bg-[#5b3ef8] hover:text-white"
+                                >
+                                  <VideoIcon className="h-3.5 w-3.5" />
+                                </button>
+                                {isActive && (
+                                  <div className="absolute inset-0 bg-[#5b3ef8]/10 pointer-events-none" />
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     )}

@@ -1,10 +1,10 @@
 # Ultragaz Character Generation Studio
 
-An AI-powered character generation studio for creating Ultragaz mascots and brand characters using Next.js, TypeScript, and Google Gemini AI.
+An AI-powered character generation studio for creating Ultragaz mascots and brand characters using Next.js, TypeScript, fal.ai Nano Banana, and Google Gemini AI.
 
 ## 🎨 Features
 
-- **AI-Powered Character Generation**: Generate detailed character descriptions using Google Gemini AI
+- **AI-Powered Character Generation**: Render characters with fal.ai Nano Banana while storyboards continue to use Google Gemini for scene planning
 - **Interactive 3D Studio Interface**: Three-panel layout with character selection, visualization, and properties
 - **Character Presets**: Pre-configured characters (ULLY, ULTRINHO) with customization options
 - **Real-time Preview**: Live visualization of character modifications
@@ -16,7 +16,7 @@ An AI-powered character generation studio for creating Ultragaz mascots and bran
 - **Framework**: Next.js 15.4.6 with Turbopack
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS + shadcn/ui components
-- **AI Integration**: Vercel AI SDK with Google Gemini 2.0 Flash
+- **AI Integration**: fal.ai Nano Banana edit API + Google Gemini (story enhancer)
 - **State Management**: Zustand
 - **Animations**: Framer Motion
 - **Deployment**: Vercel Edge Runtime
@@ -39,10 +39,11 @@ npm install
 cp .env.example .env.local
 ```
 
-4. Add your Google Gemini API key to `.env.local`:
+4. Add your fal.ai API key to `.env.local`:
 ```env
-GOOGLE_GENERATIVE_AI_API_KEY=your_api_key_here
+FAL_API_KEY=your_api_key_here
 ```
+5. (Optional) Set `GOOGLE_GENERATIVE_AI_API_KEY` if you plan to use the story enhancer.
 
 ## 🏃‍♂️ Development
 
@@ -84,16 +85,13 @@ Open [http://localhost:3000/studio](http://localhost:3000/studio) to see the app
 
 ### Environment Variables
 
-- `GOOGLE_GENERATIVE_AI_API_KEY`: Your Google Gemini API key (required for AI features)
+- `FAL_API_KEY`: Your fal.ai API key (required for image generation)
+- `GOOGLE_GENERATIVE_AI_API_KEY`: Gemini key for story enhancement & frame generation
 - `NEXT_PUBLIC_APP_URL`: Your application URL (for production)
 
 ### AI Model Configuration
 
-The app uses Google Gemini 2.0 Flash Preview model. You can modify the model settings in:
-```typescript
-// app/api/images/generate/route.ts
-const model = google('gemini-2.0-flash-exp')
-```
+Image rendering calls fal.ai's Nano Banana edit endpoint (configure with `FAL_API_KEY`). Story enhancement and storyboard frame generation continue to use Google Gemini (`GOOGLE_GENERATIVE_AI_API_KEY`).
 
 ## 📝 API Endpoints
 
@@ -140,7 +138,8 @@ This project is licensed under the MIT License.
 
 - Ultragaz for brand assets and character designs
 - Vercel for hosting and AI SDK
-- Google for Gemini AI model
+- fal.ai for Nano Banana edit model
+- Google for Gemini AI story tooling
 - shadcn/ui for beautiful components
 
 ---

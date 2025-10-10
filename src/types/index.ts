@@ -132,6 +132,7 @@ export interface GeneratedImage {
   shareUrl?: string | null
   backgroundRemovedUrl?: string | null
   previewUrl?: string | null
+  videoUrl?: string | null
   model: string
   aspectRatio?: string | null
   seed?: string | null

@@ -6,10 +6,14 @@ function imageKitRemotePattern() {
 
   try {
     const parsed = new URL(endpoint);
-    const protocol = parsed.protocol.replace(":", "") as "http" | "https";
+    const protocol = parsed.protocol.replace(":", "").toLowerCase();
+    if (protocol !== "http" && protocol !== "https") {
+      console.warn("[next.config] Unsupported protocol in IMAGEKIT_URL_ENDPOINT", protocol);
+      return null;
+    }
     const pathname = parsed.pathname.replace(/\/+$/, "");
     return {
-      protocol: protocol as "https",  // Cast to "https" for type compatibility
+      protocol: protocol as "http" | "https",
       hostname: parsed.hostname,
       pathname: `${pathname.length > 0 ? pathname : ''}/**` || "/**",
     };
@@ -22,12 +26,19 @@ function imageKitRemotePattern() {
 const remotePatterns: Array<{
   protocol: "http" | "https";
   hostname: string;
+  port?: string;
   pathname: string;
 }> = [
   {
     protocol: "https",
     hostname: "ik.imagekit.io",
     pathname: "/**",
+  },
+  {
+    protocol: "http",
+    hostname: "localhost",
+    port: "3000",
+    pathname: "/auth/**",
   },
 ];
 

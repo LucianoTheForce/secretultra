@@ -1,371 +1,596 @@
-"use client"
+"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import type { KeyboardEvent, MouseEvent } from "react"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
-import { StudioSidebar, type StudioNavKey } from "@/components/studio-sidebar"
-import { GalleryFiltersPanel, type DateRangeFilter, type MediaTypeFilter } from "@/components/gallery-filters-panel"
-import { MediaGallery } from "@/components/media-gallery"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { useCredits } from "@/hooks/use-credits"
-import type { GeneratedImage } from "@/types"
-import { ArrowLeft, Copy, Download, Sparkles, Wand2 } from "lucide-react"
+import { StudioSidebar, type StudioNavKey } from "@/components/studio-sidebar";
+import {
+  GalleryFiltersPanel,
+  type DateRangeFilter,
+  type MediaTypeFilter,
+} from "@/components/gallery-filters-panel";
+import { MediaGallery } from "@/components/media-gallery";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useCredits } from "@/hooks/use-credits";
+import type { GeneratedImage } from "@/types";
+import { setVideoStudioSource } from "@/lib/video-bridge";
+import { ArrowLeft, Copy, Download, Loader2, Sparkles, Trash2, Wand2, Video as VideoIcon } from "lucide-react";
 
-const DEFAULT_MEDIA_TYPES: MediaTypeFilter[] = ["image"]
+const DEFAULT_MEDIA_TYPES: MediaTypeFilter[] = ["image", "video"];
+const HISTORY_PAGE_SIZE = 36;
 
 export default function StudioGalleryPage() {
-  const router = useRouter()
-  const { data: creditData } = useCredits()
+  const router = useRouter();
+  const { data: creditData } = useCredits();
 
-  const [history, setHistory] = useState<GeneratedImage[]>([])
-  const [historyLoading, setHistoryLoading] = useState(true)
-  const [historyError, setHistoryError] = useState<string | null>(null)
+  const [history, setHistory] = useState<GeneratedImage[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<Set<MediaTypeFilter>>(
     () => new Set<MediaTypeFilter>(DEFAULT_MEDIA_TYPES),
-  )
-  const [selectedAspectRatios, setSelectedAspectRatios] = useState<Set<string>>(() => new Set())
-  const [dateRange, setDateRange] = useState<DateRangeFilter>("all")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
-  const [selectionAnchor, setSelectionAnchor] = useState<number | null>(null)
-  const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null)
-  const previousHistoryRef = useRef<GeneratedImage[]>([])
+  );
+  const [selectedAspectRatios, setSelectedAspectRatios] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [dateRange, setDateRange] = useState<DateRangeFilter>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectionAnchor, setSelectionAnchor] = useState<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
+  const previousHistoryRef = useRef<GeneratedImage[]>([]);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
+  const loadHistory = useCallback(
+    async ({ cursor = null, replace = false }: { cursor?: string | null; replace?: boolean } = {}) => {
+      const isInitialRequest = replace || !cursor;
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      setHistoryLoading(true)
-      setHistoryError(null)
+      if (isInitialRequest) {
+        setHistoryLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+      setHistoryError(null);
+
       try {
-        const res = await fetch("/api/images/history", { cache: "no-store" })
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`)
+        const params = new URLSearchParams();
+        params.set("limit", String(HISTORY_PAGE_SIZE));
+        if (cursor) {
+          params.set("cursor", cursor);
         }
-        const json = (await res.json()) as { images?: GeneratedImage[] }
-        if (Array.isArray(json.images) && json.images.length > 0) {
-          const sorted = [...json.images].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          )
-          const sortedIds = new Set(sorted.map((image) => image.id))
-          const previousHistory = previousHistoryRef.current
-          previousHistoryRef.current = sorted
-          setHistory(sorted)
+
+        const res = await fetch(`/api/images/history?${params.toString()}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const json = (await res.json()) as { images?: GeneratedImage[]; nextCursor?: string | null };
+        const newItems = Array.isArray(json.images) ? json.images : [];
+
+        const previousHistory = previousHistoryRef.current;
+        const baseHistory = replace ? [] : previousHistory;
+        const existingIds = new Set(baseHistory.map((item) => item.id));
+        const appendedItems = replace ? newItems : newItems.filter((item) => !existingIds.has(item.id));
+        const mergedHistory = replace ? appendedItems : [...baseHistory, ...appendedItems];
+
+        previousHistoryRef.current = mergedHistory;
+        setHistory(mergedHistory);
+
+        if (mergedHistory.length === 0) {
+          setSelectedId(null);
+          setSelectedIds(new Set());
+          setSelectionAnchor(null);
+          setPreviewImage(null);
+        } else {
+          const sortedIds = new Set(mergedHistory.map((image) => image.id));
           setSelectedIds((prev) => {
             if (prev.size === 0) {
-              return new Set()
+              return new Set();
             }
-            const validIds = [...prev].filter((id) => sortedIds.has(id))
-            return new Set(validIds)
-          })
+            const validIds = [...prev].filter((id) => sortedIds.has(id));
+            return new Set(validIds);
+          });
           setSelectedId((prev) => {
             if (prev && sortedIds.has(prev)) {
-              return prev
+              return prev;
             }
-            return null
-          })
+            return null;
+          });
           setSelectionAnchor((prev) => {
-            if (prev === null) return null
-            const anchorId = previousHistory[prev]?.id
-            if (!anchorId) return null
-            const nextIndex = sorted.findIndex((image) => image.id === anchorId)
-            return nextIndex === -1 ? null : nextIndex
-          })
+            if (prev === null) return null;
+            const anchorId = previousHistory[prev]?.id;
+            if (!anchorId) return null;
+            const nextIndex = mergedHistory.findIndex((image) => image.id === anchorId);
+            return nextIndex === -1 ? null : nextIndex;
+          });
           setPreviewImage((prev) => {
-            if (!prev) return null
-            return sorted.find((image) => image.id === prev.id) ?? null
-          })
-        } else {
-          previousHistoryRef.current = []
-          setHistory([])
-          setSelectedId(null)
-          setSelectedIds(new Set())
-          setSelectionAnchor(null)
-          setPreviewImage(null)
+            if (!prev) return null;
+            return mergedHistory.find((image) => image.id === prev.id) ?? null;
+          });
         }
+
+        const nextCursorValue = json.nextCursor ?? null;
+        setNextCursor(nextCursorValue);
+        setHasMore(Boolean(nextCursorValue));
       } catch (error) {
-        console.error("[gallery] Failed to load history", error)
-        setHistoryError(error instanceof Error ? error.message : "Falha ao carregar a galeria")
+        console.error("[gallery] Failed to load history", error);
+        setHistoryError(
+          error instanceof Error ? error.message : "Falha ao carregar a galeria",
+        );
       } finally {
-        setHistoryLoading(false)
+        if (isInitialRequest) {
+          setHistoryLoading(false);
+        } else {
+          setIsLoadingMore(false);
+        }
       }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void loadHistory({ replace: true });
+  }, [loadHistory]);
+
+  const loadMore = useCallback(() => {
+    if (historyLoading || isLoadingMore || !hasMore || !nextCursor) {
+      return;
+    }
+    void loadHistory({ cursor: nextCursor });
+  }, [hasMore, historyLoading, isLoadingMore, nextCursor, loadHistory]);
+
+  useEffect(() => {
+    if (!hasMore || historyLoading) {
+      return;
     }
 
-    void loadHistory()
-  }, [])
+    const node = loadMoreRef.current;
+    if (!node) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting) {
+          loadMore();
+        }
+      },
+      { root: null, rootMargin: "200px", threshold: 0 },
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, historyLoading, loadMore]);
 
   const availableAspectRatios = useMemo(() => {
-    const ratios = new Set<string>()
+    const ratios = new Set<string>();
     for (const item of history) {
-      const ratio = (item.aspectRatio ?? "").trim()
+      const ratio = (item.aspectRatio ?? "").trim();
       if (ratio.length > 0) {
-        ratios.add(ratio)
+        ratios.add(ratio);
       }
     }
-    return Array.from(ratios).sort()
-  }, [history])
+    return Array.from(ratios).sort();
+  }, [history]);
 
   const filteredGalleryItems = useMemo(() => {
-    const trimmedSearch = searchTerm.trim().toLowerCase()
-    const includeImages = selectedTypes.size === 0 || selectedTypes.has("image")
+    const trimmedSearch = searchTerm.trim().toLowerCase();
+    const includeImages =
+      selectedTypes.size === 0 || selectedTypes.has("image");
+    const includeVideos =
+      selectedTypes.size === 0 || selectedTypes.has("video");
 
-    let maxAgeDays: number | null = null
-    if (dateRange === "7d") maxAgeDays = 7
-    else if (dateRange === "30d") maxAgeDays = 30
-    else if (dateRange === "365d") maxAgeDays = 365
+    let maxAgeDays: number | null = null;
+    if (dateRange === "7d") maxAgeDays = 7;
+    else if (dateRange === "30d") maxAgeDays = 30;
+    else if (dateRange === "365d") maxAgeDays = 365;
 
     return history.filter((item) => {
-      if (!includeImages) {
-        return false
-      }
+      const isVideo = Boolean(item.videoUrl && item.videoUrl.length > 0);
+      const matchesType = isVideo ? includeVideos : includeImages;
+      if (!matchesType) return false;
 
       if (selectedAspectRatios.size > 0) {
-        const ratio = (item.aspectRatio ?? "").trim()
+        const ratio = (item.aspectRatio ?? "").trim();
         if (!selectedAspectRatios.has(ratio)) {
-          return false
+          return false;
         }
       }
 
       if (maxAgeDays !== null) {
-        const createdAt = new Date(item.createdAt)
+        const createdAt = new Date(item.createdAt);
         if (Number.isNaN(createdAt.getTime())) {
-          return false
+          return false;
         }
-        const ageMs = Date.now() - createdAt.getTime()
+        const ageMs = Date.now() - createdAt.getTime();
         if (ageMs > maxAgeDays * 24 * 60 * 60 * 1000) {
-          return false
+          return false;
         }
       }
 
       if (trimmedSearch.length > 0) {
-        const haystack = `${item.description ?? ""} ${item.prompt ?? ""}`.toLowerCase()
+        const haystack =
+          `${item.description ?? ""} ${item.prompt ?? ""}`.toLowerCase();
         if (!haystack.includes(trimmedSearch)) {
-          return false
+          return false;
         }
       }
 
-      return true
-    })
-  }, [history, selectedTypes, selectedAspectRatios, dateRange, searchTerm])
+      return true;
+    });
+  }, [history, selectedTypes, selectedAspectRatios, dateRange, searchTerm]);
 
   const galleryEmptyState = useMemo(() => {
     if (historyError) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 rounded-3xl border border-destructive/30 bg-destructive/10 p-8 text-center text-destructive">
-          <p className="text-sm font-semibold">N\u00e3o foi poss\u00edvel carregar a galeria</p>
+          <p className="text-sm font-semibold">
+            N\u00e3o foi poss\u00edvel carregar a galeria
+          </p>
           <p className="text-xs opacity-80">{historyError}</p>
         </div>
-      )
+      );
     }
 
     if (!historyLoading && filteredGalleryItems.length === 0) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-white/60">
           <p className="text-sm font-semibold">Nenhuma imagem encontrada</p>
-          <p className="text-xs text-white/50">Ajuste os filtros ou gere novas imagens para v\u00ea-las aqui.</p>
+          <p className="text-xs text-white/50">
+            Ajuste os filtros ou gere novas imagens para v\u00ea-las aqui.
+          </p>
         </div>
-      )
+      );
     }
 
-    return undefined
-  }, [filteredGalleryItems.length, historyError, historyLoading])
+    return undefined;
+  }, [filteredGalleryItems.length, historyError, historyLoading]);
 
-  const handleSidebarSelect = useCallback((key: StudioNavKey) => {
-    if (key === "generate") {
-      setPreviewImage(null)
-      router.push("/studio")
-    }
-  }, [router])
+  const handleSidebarSelect = useCallback(
+    (key: StudioNavKey) => {
+      if (key === "generate") {
+        setPreviewImage(null);
+        router.push("/studio");
+        return;
+      }
+      if (key === "my-stories") {
+        router.push("/studio/stories");
+        return;
+      }
+      if (key === "settings") {
+        router.push("/profile");
+        return;
+      }
+    },
+    [router, setPreviewImage],
+  );
 
   const handleToggleMediaType = useCallback((type: MediaTypeFilter) => {
     setSelectedTypes((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(type)) {
-        next.delete(type)
+        next.delete(type);
       } else {
-        next.add(type)
+        next.add(type);
       }
-      return next
-    })
-  }, [])
+      return next;
+    });
+  }, []);
 
   const handleToggleAspectRatio = useCallback((ratio: string) => {
     setSelectedAspectRatios((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(ratio)) {
-        next.delete(ratio)
+        next.delete(ratio);
       } else {
-        next.add(ratio)
+        next.add(ratio);
       }
-      return next
-    })
-  }, [])
+      return next;
+    });
+  }, []);
 
   const handleDateRangeChange = useCallback((range: DateRangeFilter) => {
-    setDateRange(range)
-  }, [])
+    setDateRange(range);
+  }, []);
 
   const handleSearchChange = useCallback((value: string) => {
-    setSearchTerm(value)
-  }, [])
+    setSearchTerm(value);
+  }, []);
 
   const handleClearFilters = useCallback(() => {
-    setSelectedTypes(new Set<MediaTypeFilter>(DEFAULT_MEDIA_TYPES))
-    setSelectedAspectRatios(new Set<string>())
-    setDateRange("all")
-    setSearchTerm("")
-  }, [])
+    setSelectedTypes(new Set<MediaTypeFilter>(DEFAULT_MEDIA_TYPES));
+    setSelectedAspectRatios(new Set<string>());
+    setDateRange("all");
+    setSearchTerm("");
+  }, []);
 
   const handleClearSelection = useCallback(() => {
-    setSelectedIds(new Set())
-    setSelectedId(null)
-    setSelectionAnchor(null)
-    setPreviewImage(null)
-  }, [])
+    setSelectedIds(new Set());
+    setSelectedId(null);
+    setSelectionAnchor(null);
+    setPreviewImage(null);
+  }, []);
 
   const handleGallerySelect = useCallback(
-    (item: GeneratedImage, event?: KeyboardEvent<HTMLDivElement> | MouseEvent<HTMLDivElement>) => {
-      const index = history.findIndex((image) => image.id === item.id)
-      if (index === -1) return
+    (
+      item: GeneratedImage,
+      event?: KeyboardEvent<HTMLDivElement> | MouseEvent<HTMLDivElement>,
+    ) => {
+      const index = history.findIndex((image) => image.id === item.id);
+      if (index === -1) return;
 
-      const metaKey = event && 'metaKey' in event ? event.metaKey : false
-      const ctrlKey = event && 'ctrlKey' in event ? event.ctrlKey : false
-      const shiftPressed = Boolean(event && 'shiftKey' in event && event.shiftKey)
-      const ctrlPressed = Boolean(metaKey || ctrlKey)
+      const metaKey = event && "metaKey" in event ? event.metaKey : false;
+      const ctrlKey = event && "ctrlKey" in event ? event.ctrlKey : false;
+      const shiftPressed = Boolean(
+        event && "shiftKey" in event && event.shiftKey,
+      );
+      const ctrlPressed = Boolean(metaKey || ctrlKey);
 
       setSelectedIds((prev) => {
         if (shiftPressed && history.length > 0) {
-          const anchor = selectionAnchor ?? index
-          const startIndex = Math.min(anchor, index)
-          const endIndex = Math.max(anchor, index)
-          const range = history.slice(startIndex, endIndex + 1).map((image) => image.id)
-          return new Set(range)
+          const anchor = selectionAnchor ?? index;
+          const startIndex = Math.min(anchor, index);
+          const endIndex = Math.max(anchor, index);
+          const range = history
+            .slice(startIndex, endIndex + 1)
+            .map((image) => image.id);
+          return new Set(range);
         }
 
         if (ctrlPressed) {
-          const next = new Set(prev)
+          const next = new Set(prev);
           if (next.has(item.id)) {
-            next.delete(item.id)
+            next.delete(item.id);
           } else {
-            next.add(item.id)
+            next.add(item.id);
           }
-          return next.size > 0 ? next : new Set([item.id])
+          return next.size > 0 ? next : new Set([item.id]);
         }
 
-        return new Set([item.id])
-      })
+        return new Set([item.id]);
+      });
 
-      setSelectionAnchor(shiftPressed ? (selectionAnchor ?? index) : index)
-      setSelectedId(item.id)
+      setSelectionAnchor(shiftPressed ? (selectionAnchor ?? index) : index);
+      setSelectedId(item.id);
 
       if (!ctrlPressed && !shiftPressed) {
-        setPreviewImage(item)
+        setPreviewImage(item);
       }
     },
     [history, selectionAnchor],
-  )
+  );
 
   const handleGalleryDragSelection = useCallback(
     (ids: string[]) => {
       if (ids.length === 0) {
-        setSelectedIds(new Set())
-        setSelectedId(null)
-        setSelectionAnchor(null)
-        setPreviewImage(null)
-        return
+        setSelectedIds(new Set());
+        setSelectedId(null);
+        setSelectionAnchor(null);
+        setPreviewImage(null);
+        return;
       }
 
-      setSelectedIds(new Set(ids))
-      const lastId = ids[ids.length - 1] ?? null
-      setSelectedId(lastId)
+      setSelectedIds(new Set(ids));
+      const lastId = ids[ids.length - 1] ?? null;
+      setSelectedId(lastId);
 
-      const anchorId = ids[0] ?? null
+      const anchorId = ids[0] ?? null;
       if (anchorId) {
-        const anchorIndex = history.findIndex((image) => image.id === anchorId)
-        setSelectionAnchor(anchorIndex === -1 ? null : anchorIndex)
+        const anchorIndex = history.findIndex((image) => image.id === anchorId);
+        setSelectionAnchor(anchorIndex === -1 ? null : anchorIndex);
       } else {
-        setSelectionAnchor(null)
+        setSelectionAnchor(null);
       }
 
       setPreviewImage((prev) => {
         if (ids.length === 1) {
-          return history.find((image) => image.id === ids[0]) ?? prev
+          return history.find((image) => image.id === ids[0]) ?? prev;
         }
         if (prev && ids.includes(prev.id)) {
-          return prev
+          return prev;
         }
-        return null
-      })
+        return null;
+      });
     },
     [history],
-  )
+  );
 
   const previewCreatedAt = useMemo(() => {
-    if (!previewImage) return null
-    const date = new Date(previewImage.createdAt)
-    if (Number.isNaN(date.getTime())) return null
-    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(date)
-  }, [previewImage])
+    if (!previewImage) return null;
+    const date = new Date(previewImage.createdAt);
+    if (Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  }, [previewImage]);
 
   const handleClosePreview = useCallback(() => {
-    setPreviewImage(null)
-  }, [])
+    setPreviewImage(null);
+  }, []);
 
   const handleOpenInStudio = useCallback(() => {
-    if (!previewImage) return
-    setPreviewImage(null)
-    router.push("/studio")
-  }, [previewImage, router])
+    if (!previewImage) return;
+    setPreviewImage(null);
+    router.push("/studio");
+  }, [previewImage, router]);
 
   const handleDownload = useCallback(() => {
-    if (!previewImage) return
-    const url = previewImage.imagePath || previewImage.previewUrl
-    if (!url) return
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.target = "_blank"
-    anchor.rel = "noopener noreferrer"
-    anchor.download = previewImage.id ?? "galeria"
-    document.body.appendChild(anchor)
-    anchor.click()
-    document.body.removeChild(anchor)
-  }, [previewImage])
+    if (!previewImage) return;
+    const url =
+      previewImage.videoUrl ||
+      previewImage.shareUrl ||
+      previewImage.imagePath ||
+      previewImage.previewUrl;
+    if (!url) return;
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    anchor.download = previewImage.id ?? "galeria";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+  }, [previewImage]);
 
   const handleCopyPrompt = useCallback(() => {
-    if (!previewImage?.prompt) return
-    void navigator.clipboard?.writeText(previewImage.prompt).catch(() => {})
-  }, [previewImage])
+    if (!previewImage?.prompt) return;
+    void navigator.clipboard?.writeText(previewImage.prompt).catch(() => {});
+  }, [previewImage]);
 
-  const sidebarCredits = creditData?.credits ?? null
-  const sidebarTotal = creditData?.totalGenerated ?? null
-  const hasUnlimitedCredits = Boolean(creditData?.hasUnlimitedCredits)
-  const isAdmin = Boolean(creditData?.isAdmin)
+  const handleSendToVideo = useCallback(
+    (item: GeneratedImage) => {
+      setVideoStudioSource({
+        imageUrl: (item.shareUrl && !item.shareUrl.includes("localhost:3000/auth") ? item.shareUrl : item.previewUrl && !item.previewUrl.includes("localhost:3000/auth") ? item.previewUrl : item.imagePath) ?? item.imagePath,
+        previewUrl: item.previewUrl && !item.previewUrl.includes("localhost:3000/auth") ? item.previewUrl : item.shareUrl && !item.shareUrl.includes("localhost:3000/auth") ? item.shareUrl : item.imagePath,
+        prompt: item.prompt,
+        description: item.description,
+        model: item.model,
+        id: item.id,
+      });
+      router.push("/studio/videos");
+    },
+    [router],
+  );
+
+  const handlePreviewSendToVideo = useCallback(() => {
+    if (!previewImage) return;
+    handleSendToVideo(previewImage);
+  }, [handleSendToVideo, previewImage]);
+
+  const sidebarCredits = creditData?.credits ?? null;
+  const sidebarTotal = creditData?.totalGenerated ?? null;
+  const hasUnlimitedCredits = Boolean(creditData?.hasUnlimitedCredits);
+  const isAdmin = Boolean(creditData?.isAdmin);
 
   const selectedItems = useMemo(() => {
-    if (selectedIds.size === 0) return []
-    return history.filter((image) => selectedIds.has(image.id))
-  }, [history, selectedIds])
+    if (selectedIds.size === 0) return [];
+    return history.filter((image) => selectedIds.has(image.id));
+  }, [history, selectedIds]);
 
-  const selectedCount = selectedIds.size
+  const selectedCount = selectedIds.size;
 
   const handleBulkDownload = useCallback(() => {
-    if (selectedItems.length === 0) return
+    if (selectedItems.length === 0) return;
     selectedItems.forEach((item) => {
-      const url = item.imagePath || item.previewUrl
-      if (!url) return
-      const anchor = document.createElement("a")
-      anchor.href = url
-      anchor.target = "_blank"
-      anchor.rel = "noopener noreferrer"
-      anchor.download = item.id ?? "galeria"
-      document.body.appendChild(anchor)
-      anchor.click()
-      document.body.removeChild(anchor)
-    })
-  }, [selectedItems])
+      const url = item.videoUrl || item.shareUrl || item.imagePath || item.previewUrl;
+      if (!url) return;
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.download = item.id ?? "galeria";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+    });
+  }, [selectedItems]);
+
+  const handleDeleteSelected = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    const confirmed = window.confirm(
+      ids.length === 1
+        ? "Deseja excluir a imagem selecionada?"
+        : "Deseja excluir as imagens selecionadas?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const failed: string[] = [];
+
+    for (const id of ids) {
+      try {
+        const response = await fetch(`/api/images/${id}`, { method: "DELETE" });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(
+            typeof payload.error === "string"
+              ? payload.error
+              : "Falha ao excluir a imagem.",
+          );
+        }
+      } catch (error) {
+        console.error("[gallery] failed to delete image", id, error);
+        failed.push(id);
+      }
+    }
+
+    const successIds = ids.filter((id) => !failed.includes(id));
+    if (successIds.length > 0) {
+      setHistory((prev) =>
+        prev.filter((image) => !successIds.includes(image.id)),
+      );
+      setSelectedIds(new Set());
+      setSelectedId(null);
+      setSelectionAnchor(null);
+      setPreviewImage((prev) =>
+        prev && successIds.includes(prev.id) ? null : prev,
+      );
+    }
+
+    if (failed.length > 0) {
+      window.alert(
+        failed.length === ids.length
+          ? "N\u00e3o foi poss\u00edvel excluir as imagens selecionadas."
+          : "Algumas imagens n\u00e3o puderam ser exclu\u00eddas.",
+      );
+    }
+  }, [selectedIds]);
+
+  const handleDeletePreview = useCallback(async () => {
+    if (!previewImage) return;
+
+    const confirmed = window.confirm("Deseja excluir esta imagem da galeria?");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/images/${previewImage.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          typeof payload.error === "string"
+            ? payload.error
+            : "Falha ao excluir a imagem.",
+        );
+      }
+
+      setHistory((prev) =>
+        prev.filter((image) => image.id !== previewImage.id),
+      );
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(previewImage.id);
+        return next;
+      });
+      setSelectedId((prev) => (prev === previewImage.id ? null : prev));
+      setSelectionAnchor(null);
+      setPreviewImage(null);
+    } catch (error) {
+      console.error("[gallery] failed to delete preview image", error);
+      window.alert("Falha ao excluir a imagem selecionada.");
+    }
+  }, [previewImage]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-950 text-slate-100">
@@ -373,7 +598,9 @@ export default function StudioGalleryPage() {
         credits={sidebarCredits}
         totalGenerated={sidebarTotal}
         isGenerating={false}
-        onManageCredits={isAdmin ? () => router.push("/admin/credits") : undefined}
+        onManageCredits={
+          isAdmin ? () => router.push("/admin/credits") : undefined
+        }
         activeKey="my-images"
         onSelect={handleSidebarSelect}
         hasUnlimitedCredits={hasUnlimitedCredits}
@@ -394,14 +621,29 @@ export default function StudioGalleryPage() {
                   <ArrowLeft className="h-5 w-5" />
                 </button>
                 <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-neutral-900">
-                  <Image
-                    src={previewImage.previewUrl || previewImage.imagePath}
-                    alt={previewImage.description ?? previewImage.prompt ?? "Imagem da galeria"}
-                    fill
-                    sizes="(min-width: 1280px) 55vw, (min-width: 768px) 70vw, 100vw"
-                    className="object-contain"
-                    priority
-                  />
+                  {previewImage.videoUrl ? (
+                    <video
+                      key={previewImage.videoUrl}
+                      controls
+                      poster={previewImage.previewUrl || previewImage.imagePath || undefined}
+                      className="max-h-full w-full bg-black object-contain"
+                    >
+                      <source src={previewImage.videoUrl} type="video/mp4" />
+                    </video>
+                  ) : (
+                    <Image
+                      src={previewImage.previewUrl || previewImage.imagePath}
+                      alt={
+                        previewImage.description ??
+                        previewImage.prompt ??
+                        "Imagem da galeria"
+                      }
+                      fill
+                      sizes="(min-width: 1280px) 55vw, (min-width: 768px) 70vw, 100vw"
+                      className="object-contain"
+                      priority
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -414,15 +656,30 @@ export default function StudioGalleryPage() {
                 selectedIds={selectedIds}
                 onSelect={handleGallerySelect}
                 onSelectionChange={handleGalleryDragSelection}
+                onSendToVideo={handleSendToVideo}
                 className="flex-1"
                 emptyState={galleryEmptyState}
                 showDescription={false}
               />
+              <div ref={loadMoreRef} className="h-6 w-full" />
+              {isLoadingMore && (
+                <div className="flex items-center justify-center gap-2 px-6 py-4 text-xs text-white/50">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Carregando mais artes...
+                </div>
+              )}
+              {!historyLoading && !hasMore && history.length > 0 && (
+                <p className="px-6 py-4 text-center text-[11px] uppercase tracking-[0.3em] text-white/30">
+                  Voc\u00ea chegou ao fim da galeria.
+                </p>
+              )}
               {selectedCount > 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-white/5 px-6 py-4 text-[11px] uppercase tracking-[0.3em] text-white/60">
                   <div className="flex flex-wrap items-center gap-3">
                     <span>
-                      {selectedCount === 1 ? "1 imagem selecionada" : `${selectedCount} imagens selecionadas`}
+                      {selectedCount === 1
+                        ? "1 imagem selecionada"
+                        : `${selectedCount} imagens selecionadas`}
                     </span>
                     <span className="hidden text-[10px] uppercase tracking-[0.4em] text-white/40 md:inline">
                       Shift seleciona intervalo. Ctrl alterna itens.
@@ -436,6 +693,15 @@ export default function StudioGalleryPage() {
                     >
                       Limpar selecao
                     </button>
+                    <Button
+                      variant="destructive"
+                      className="flex h-9 items-center gap-2 rounded-lg px-4 text-[11px] font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-red-600/80"
+                      onClick={handleDeleteSelected}
+                      disabled={selectedItems.length === 0}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Excluir selecionadas
+                    </Button>
                     <Button
                       variant="outline"
                       className="flex h-9 items-center gap-2 rounded-lg border-white/20 px-4 text-[11px] font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-white/10"
@@ -455,22 +721,34 @@ export default function StudioGalleryPage() {
           <div className="flex w-full flex-col gap-6 border-t border-white/10 bg-neutral-950/90 p-6 lg:h-full lg:w-[360px] lg:flex-shrink-0 lg:border-l lg:border-t-0 lg:overflow-y-auto lg:p-8">
             <div className="flex flex-wrap items-center gap-2">
               {previewImage.model && (
-                <Badge variant="secondary" className="bg-white/10 text-xs uppercase tracking-[0.3em]">
+                <Badge
+                  variant="secondary"
+                  className="bg-white/10 text-xs uppercase tracking-[0.3em]"
+                >
                   {previewImage.model}
                 </Badge>
               )}
               {previewImage.aspectRatio && (
-                <Badge variant="outline" className="border-white/20 text-xs uppercase tracking-[0.25em]">
+                <Badge
+                  variant="outline"
+                  className="border-white/20 text-xs uppercase tracking-[0.25em]"
+                >
                   {previewImage.aspectRatio}
                 </Badge>
               )}
               {previewImage.seed && (
-                <Badge variant="outline" className="border-white/20 text-xs uppercase tracking-[0.25em]">
+                <Badge
+                  variant="outline"
+                  className="border-white/20 text-xs uppercase tracking-[0.25em]"
+                >
                   Seed {previewImage.seed}
                 </Badge>
               )}
               {previewCreatedAt && (
-                <Badge variant="outline" className="border-white/20 text-xs uppercase tracking-[0.25em]">
+                <Badge
+                  variant="outline"
+                  className="border-white/20 text-xs uppercase tracking-[0.25em]"
+                >
                   {previewCreatedAt}
                 </Badge>
               )}
@@ -478,7 +756,9 @@ export default function StudioGalleryPage() {
 
             <div className="space-y-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.3em] text-white/40">Prompt</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/40">
+                  Prompt
+                </p>
                 <p className="mt-2 whitespace-pre-line text-sm text-white/90">
                   {previewImage.prompt || "Prompt indisponivel"}
                 </p>
@@ -495,8 +775,12 @@ export default function StudioGalleryPage() {
 
               {previewImage.description && (
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/40">Descricao</p>
-                  <p className="mt-2 text-sm text-white/80">{previewImage.description}</p>
+                  <p className="text-xs uppercase tracking-[0.3em] text-white/40">
+                    Descricao
+                  </p>
+                  <p className="mt-2 text-sm text-white/80">
+                    {previewImage.description}
+                  </p>
                 </div>
               )}
             </div>
@@ -520,10 +804,26 @@ export default function StudioGalleryPage() {
               <Button
                 variant="outline"
                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border-white/20 text-sm text-white transition hover:bg-white/10"
+                onClick={handlePreviewSendToVideo}
+              >
+                <VideoIcon className="h-4 w-4" />
+                Enviar para video studio
+              </Button>
+              <Button
+                variant="outline"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border-white/20 text-sm text-white transition hover:bg-white/10"
                 onClick={handleDownload}
               >
                 <Download className="h-4 w-4" />
                 Baixar imagem
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm text-white transition hover:bg-red-600/80"
+                onClick={handleDeletePreview}
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir imagem
               </Button>
             </div>
           </div>
@@ -543,7 +843,5 @@ export default function StudioGalleryPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
-
-

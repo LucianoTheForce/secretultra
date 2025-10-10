@@ -1,14 +1,28 @@
-"use client"
+"use client";
 
-import Image from "next/image"
-import { Sparkles, Image as ImageIcon, Video, BookOpen, Settings, LifeBuoy, ShieldCheck } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import Image from "next/image";
+import {
+  Sparkles,
+  Image as ImageIcon,
+  Video,
+  BookOpen,
+  Settings,
+  LifeBuoy,
+  ShieldCheck,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import { UserProfile } from "@/components/auth/user-profile"
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { UserProfile } from "@/components/auth/user-profile";
 
-export type StudioNavKey = "generate" | "my-images" | "my-videos" | "my-stories" | "settings" | "support"
+export type StudioNavKey =
+  | "generate"
+  | "my-images"
+  | "my-videos"
+  | "my-stories"
+  | "settings"
+  | "support";
 
 const MAIN_NAV: { key: StudioNavKey; label: string; icon: LucideIcon }[] = [
   { key: "generate", label: "Generate", icon: Sparkles },
@@ -17,20 +31,20 @@ const MAIN_NAV: { key: StudioNavKey; label: string; icon: LucideIcon }[] = [
   { key: "my-stories", label: "My stories", icon: BookOpen },
   { key: "settings", label: "Settings", icon: Settings },
   { key: "support", label: "Support", icon: LifeBuoy },
-]
+];
 
 interface StudioSidebarProps {
-  credits: number | null
-  totalGenerated: number | null
-  isGenerating?: boolean
-  onNewChat?: () => void
-  onManageCredits?: () => void
-  activeKey?: StudioNavKey
-  onSelect?: (key: StudioNavKey) => void
-  hasUnlimitedCredits?: boolean
-  isAdmin?: boolean
-  onAdminNavigate?: () => void
-  className?: string
+  credits: number | null;
+  totalGenerated: number | null;
+  isGenerating?: boolean;
+  onNewChat?: () => void;
+  onManageCredits?: () => void;
+  activeKey?: StudioNavKey;
+  onSelect?: (key: StudioNavKey) => void;
+  hasUnlimitedCredits?: boolean;
+  isAdmin?: boolean;
+  onAdminNavigate?: () => void;
+  className?: string;
 }
 
 export function StudioSidebar({
@@ -50,16 +64,17 @@ export function StudioSidebar({
     ? "Unlimited credits"
     : credits === null
       ? "Syncing"
-      : `${credits} credits`
-  const totalLabel = typeof totalGenerated === "number"
-    ? `${totalGenerated} generated`
-    : hasUnlimitedCredits
-      ? "Master account"
-      : "Keep creating"
-  const resolvedActive = activeKey ?? "generate"
-  const handleSelect = onSelect ?? (() => {})
-  const handleManageCredits = onManageCredits ?? (() => {})
-  const handleNewChat = onNewChat ?? (() => {})
+      : `${credits} credits`;
+  const totalLabel =
+    typeof totalGenerated === "number"
+      ? `${totalGenerated} generated`
+      : hasUnlimitedCredits
+        ? "Master account"
+        : "Keep creating";
+  const resolvedActive = activeKey ?? "generate";
+  const handleSelect = onSelect ?? (() => {});
+  const handleManageCredits = onManageCredits ?? (() => {});
+  const handleNewChat = onNewChat ?? (() => {});
 
   return (
     <aside
@@ -76,7 +91,8 @@ export function StudioSidebar({
             width={180}
             height={45}
             priority
-            className="select-none"
+            className="select-none h-auto"
+            style={{ width: "auto" }}
           />
         </div>
       </div>
@@ -84,8 +100,8 @@ export function StudioSidebar({
       <nav className="flex-1 space-y-4 overflow-y-auto px-5 pb-10">
         <div className="space-y-2">
           {MAIN_NAV.map((item) => {
-            const Icon = item.icon
-            const isActive = resolvedActive === item.key
+            const Icon = item.icon;
+            const isActive = resolvedActive === item.key;
             return (
               <button
                 key={item.key}
@@ -101,17 +117,22 @@ export function StudioSidebar({
                 <Icon
                   className={cn(
                     "h-4 w-4",
-                    isActive ? "text-white" : "text-[#7c7b91] group-hover:text-white",
+                    isActive
+                      ? "text-white"
+                      : "text-[#7c7b91] group-hover:text-white",
                   )}
                 />
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.key === "generate" && isGenerating && (
-                  <Badge variant="secondary" className="ml-auto rounded-full bg-white/20 px-2 py-0 text-[10px] text-white">
+                  <Badge
+                    variant="secondary"
+                    className="ml-auto rounded-full bg-white/20 px-2 py-0 text-[10px] text-white"
+                  >
                     Generating
                   </Badge>
                 )}
               </button>
-            )
+            );
           })}
         </div>
 
@@ -128,7 +149,10 @@ export function StudioSidebar({
               <ShieldCheck className="h-4 w-4 text-[#7c5cff] group-hover:text-white" />
               <span className="flex-1 text-left">Admin dashboard</span>
               {hasUnlimitedCredits && (
-                <Badge variant="secondary" className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white">
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white"
+                >
                   Master
                 </Badge>
               )}
@@ -162,17 +186,14 @@ export function StudioSidebar({
               </button>
             )}
           </div>
-          <p className="mt-2 text-lg font-semibold text-white">{creditsLabel}</p>
+          <p className="mt-2 text-lg font-semibold text-white">
+            {creditsLabel}
+          </p>
           <p className="text-xs text-[#7c7b91]">{totalLabel}</p>
         </div>
 
         <UserProfile />
       </div>
     </aside>
-  )
+  );
 }
-
-
-
-
-

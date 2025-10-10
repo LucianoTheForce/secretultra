@@ -204,4 +204,5 @@ export const CREDIT_COSTS = {
 }
 
 export const PUBLIC_IMAGE_ENGINE_NAME = "Ultragaz Studio Engine";
+export const PUBLIC_VIDEO_ENGINE_NAME = "Ultragaz Video Engine";
 

@@ -1,9 +1,9 @@
 "use client"
 
-import Image from "next/image"
 import { useCallback, useMemo, useRef, useState } from "react"
 import type { KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react"
-import { Check, Filter, Loader2 } from "lucide-react"
+import Image from "next/image"
+import { Check, Filter, Loader2, Play, Video as VideoIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import type { GeneratedImage } from "@/types"
@@ -18,6 +18,7 @@ type MediaGalleryProps = {
     event?: KeyboardEvent<HTMLDivElement> | MouseEvent<HTMLDivElement>,
   ) => void
   onSelectionChange?: (selectedIds: string[]) => void
+  onSendToVideo?: (item: GeneratedImage) => void
   className?: string
   emptyState?: ReactNode
   showDescription?: boolean
@@ -69,6 +70,7 @@ export function MediaGallery({
   selectedIds,
   onSelect,
   onSelectionChange,
+  onSendToVideo,
   className,
   emptyState,
   showDescription = true,
@@ -290,6 +292,13 @@ export function MediaGallery({
             const isSelected = isSelectedFromSet || isPrimarySelected
             const selectionIndex = selectionOrder.indexOf(item.id)
             const showSelectionOrder = selectionOrder.length > 1 && selectionIndex !== -1
+            const isVideo = Boolean(item.videoUrl && item.videoUrl.length > 0)
+            const poster =
+              (item.previewUrl && !item.previewUrl.includes("localhost:3000/auth")
+                ? item.previewUrl
+                : item.shareUrl && !item.shareUrl.includes("localhost:3000/auth")
+                  ? item.shareUrl
+                  : item.imagePath) || item.videoUrl || ""
 
             return (
               <div
@@ -314,13 +323,26 @@ export function MediaGallery({
                 )}
               >
                 <div className="relative aspect-video w-full overflow-hidden bg-black/40">
-                  <Image
-                    src={item.previewUrl || item.imagePath}
-                    alt={description}
-                    fill
-                    sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
-                    className="object-cover transition duration-500 ease-out group-hover:scale-105"
-                  />
+                  {isVideo ? (
+                    <video
+                      key={item.videoUrl ?? item.id}
+                      src={item.videoUrl ?? undefined}
+                      poster={poster}
+                      preload="metadata"
+                      muted
+                      loop
+                      playsInline
+                      className="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-105"
+                    />
+                  ) : (
+                    <Image
+                      src={poster}
+                      alt={description}
+                      fill
+                      sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+                      className="object-cover transition duration-500 ease-out group-hover:scale-105"
+                    />
+                  )}
                   <span
                     className={cn(
                       "pointer-events-none absolute left-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-white/40 bg-black/50 text-xs font-semibold text-white/80 shadow-md transition-opacity duration-200",
@@ -333,6 +355,24 @@ export function MediaGallery({
                       <Check className="h-4 w-4" />
                     ) : null}
                   </span>
+                  {isVideo && (
+                    <span className="pointer-events-none absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/60 text-white/80 shadow-md">
+                      <Play className="h-4 w-4" />
+                    </span>
+                  )}
+                  {onSendToVideo && !isVideo && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        onSendToVideo(item)
+                      }}
+                      className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/60 text-white/80 shadow-lg transition hover:border-[#5b3ef8] hover:bg-[#5b3ef8] hover:text-white"
+                    >
+                      <VideoIcon className="h-4 w-4" />
+                    </button>
+                  )}
                   {showDescription && (
                     <>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition group-hover:opacity-100" />

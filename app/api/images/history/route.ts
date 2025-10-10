@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq, lt } from "drizzle-orm"
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
@@ -20,10 +20,33 @@ function sanitizeModelMentions(input?: string | null): string | null {
 
 export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url)
+    const limitParam = searchParams.get("limit")
+    const cursorParam = searchParams.get("cursor")
+
+    const DEFAULT_LIMIT = 36
+    const MAX_LIMIT = 100
+
     const session = await auth.api.getSession({ headers: req.headers })
 
     if (!session?.user) {
-      return NextResponse.json({ images: [] }, { status: 200 })
+      return NextResponse.json({ images: [], nextCursor: null }, { status: 200 })
+    }
+
+    const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : DEFAULT_LIMIT
+    const limit =
+      Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, MAX_LIMIT)
+        : DEFAULT_LIMIT
+
+    const cursorDate =
+      cursorParam && Number.isFinite(Date.parse(cursorParam))
+        ? new Date(cursorParam)
+        : null
+
+    let whereClause = eq(generatedImages.userId, session.user.id)
+    if (cursorDate) {
+      whereClause = and(whereClause, lt(generatedImages.createdAt, cursorDate))
     }
 
     const records = await db
@@ -36,32 +59,41 @@ export async function GET(req: Request) {
         shareUrl: generatedImages.shareUrl,
         backgroundRemovedUrl: generatedImages.backgroundRemovedUrl,
         previewUrl: generatedImages.previewUrl,
+        videoUrl: generatedImages.videoUrl,
         aspectRatio: generatedImages.aspectRatio,
         seed: generatedImages.seed,
         createdAt: generatedImages.createdAt,
       })
       .from(generatedImages)
-      .where(eq(generatedImages.userId, session.user.id))
+      .where(whereClause)
       .orderBy(desc(generatedImages.createdAt))
-      .limit(50)
+      .limit(limit)
 
     const images = records.map((record) => ({
       id: record.id,
       prompt: record.prompt,
       description: sanitizeModelMentions(record.description ?? null),
       imagePath: record.imagePath,
-      model: PUBLIC_IMAGE_ENGINE_NAME,
+      previewUrl: record.previewUrl,
+      shareUrl: record.shareUrl,
+      backgroundRemovedUrl: record.backgroundRemovedUrl,
+      videoUrl: record.videoUrl,
+      model: record.model ?? PUBLIC_IMAGE_ENGINE_NAME,
       aspectRatio: record.aspectRatio,
       seed: record.seed,
       createdAt: record.createdAt?.toISOString() ?? new Date().toISOString(),
     }))
 
-    return NextResponse.json({ images })
+    const nextCursor =
+      records.length === limit
+        ? records[records.length - 1]?.createdAt?.toISOString() ?? null
+        : null
+
+    return NextResponse.json({ images, nextCursor })
   } catch (error) {
     console.error("Failed to load generated images", error)
-    return NextResponse.json({ images: [] }, { status: 500 })
+    return NextResponse.json({ images: [], nextCursor: null }, { status: 500 })
   }
 }
-
 
 

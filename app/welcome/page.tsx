@@ -1,18 +1,18 @@
-"use client"
+"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { motion } from "framer-motion"
+import { motion } from "framer-motion";
 
-import Image from "next/image"
+import Image from "next/image";
 
-import { useRouter } from "next/navigation"
+import { useRouter } from "next/navigation";
 
-import { useSession } from "@/lib/auth-client"
+import { useSession } from "@/lib/auth-client";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 
-import { LoginModal } from "@/components/auth/login-modal"
+import { LoginModal } from "@/components/auth/login-modal";
 
 import {
   ArrowRight,
@@ -28,9 +28,9 @@ import {
   Users,
   Workflow,
   type LucideIcon,
-} from "lucide-react"
+} from "lucide-react";
 
-import Link from "next/link"
+import Link from "next/link";
 
 // Header component - exactly like reference with interface blue
 
@@ -49,7 +49,8 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
                 width={100}
                 height={25}
                 priority
-                className="select-none"
+                className="select-none h-auto"
+                style={{ width: "auto" }}
               />
             </Link>
 
@@ -65,7 +66,7 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
         </div>
       </div>
     </header>
-  )
+  );
 }
 
 // Rotating typed text component
@@ -83,45 +84,45 @@ function RotatingTypedText({
 
   autoRotate = false,
 }: {
-  items: string[]
+  items: string[];
 
-  activeIndex: number
+  activeIndex: number;
 
-  typeSpeedMs?: number
+  typeSpeedMs?: number;
 
-  backSpeedMs?: number
+  backSpeedMs?: number;
 
-  className?: string
+  className?: string;
 
-  autoRotate?: boolean
+  autoRotate?: boolean;
 }) {
-  const [display, setDisplay] = useState("")
+  const [display, setDisplay] = useState("");
 
   const [phase, setPhase] = useState<"typing" | "holding" | "deleting">(
     "typing",
-  )
+  );
 
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const prevIndex = useRef<number>(activeIndex)
+  const prevIndex = useRef<number>(activeIndex);
 
   useEffect(() => {
-    const current = items[activeIndex % items.length] ?? ""
+    const current = items[activeIndex % items.length] ?? "";
 
     // Reset when index changes
 
     if (prevIndex.current !== activeIndex) {
-      prevIndex.current = activeIndex
+      prevIndex.current = activeIndex;
 
-      setDisplay("")
+      setDisplay("");
 
-      setPhase("typing")
+      setPhase("typing");
 
-      return
+      return;
     }
 
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
+      clearTimeout(timeoutRef.current);
     }
 
     if (phase === "typing") {
@@ -130,18 +131,18 @@ function RotatingTypedText({
           () => setDisplay(current.slice(0, display.length + 1)),
 
           typeSpeedMs,
-        )
+        );
       } else if (!autoRotate) {
         // Stay on completed text when not auto-rotating
 
-        return
+        return;
       } else {
-        timeoutRef.current = setTimeout(() => setPhase("holding"), 900)
+        timeoutRef.current = setTimeout(() => setPhase("holding"), 900);
       }
     } else if (phase === "holding") {
-      if (!autoRotate) return
+      if (!autoRotate) return;
 
-      timeoutRef.current = setTimeout(() => setPhase("deleting"), 900)
+      timeoutRef.current = setTimeout(() => setPhase("deleting"), 900);
     } else {
       // deleting
 
@@ -150,15 +151,15 @@ function RotatingTypedText({
           () => setDisplay(current.slice(0, display.length - 1)),
 
           backSpeedMs,
-        )
+        );
       } else {
-        setPhase("typing")
+        setPhase("typing");
       }
     }
 
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [
     display,
     phase,
@@ -167,7 +168,7 @@ function RotatingTypedText({
     typeSpeedMs,
     backSpeedMs,
     autoRotate,
-  ])
+  ]);
 
   return (
     <span className={className}>
@@ -181,7 +182,7 @@ function RotatingTypedText({
         className="inline-block ml-1 w-1 h-[1.2em] bg-current align-baseline"
       />
     </span>
-  )
+  );
 }
 
 // Background cards carousel component
@@ -197,47 +198,47 @@ function CardsBackgroundCarousel({
 
   autoPlay = true,
 }: {
-  slides: { src: string; alt: string }[]
+  slides: { src: string; alt: string }[];
 
-  currentIndex: number
+  currentIndex: number;
 
-  onIndexChange?: (i: number) => void
+  onIndexChange?: (i: number) => void;
 
-  intervalMs?: number
+  intervalMs?: number;
 
-  autoPlay?: boolean
+  autoPlay?: boolean;
 }) {
-  const [internalIndex, setInternalIndex] = useState(0)
+  const [internalIndex, setInternalIndex] = useState(0);
 
   // Auto-advance
 
   useEffect(() => {
-    if (!autoPlay || slides.length <= 1) return
+    if (!autoPlay || slides.length <= 1) return;
 
     const timer = setInterval(() => {
       if (onIndexChange) {
-        onIndexChange((currentIndex + 1) % slides.length)
+        onIndexChange((currentIndex + 1) % slides.length);
       } else {
-        setInternalIndex((i) => (i + 1) % slides.length)
+        setInternalIndex((i) => (i + 1) % slides.length);
       }
-    }, intervalMs)
+    }, intervalMs);
 
-    return () => clearInterval(timer)
-  }, [autoPlay, intervalMs, slides.length, currentIndex, onIndexChange])
+    return () => clearInterval(timer);
+  }, [autoPlay, intervalMs, slides.length, currentIndex, onIndexChange]);
 
   const getDelta = (i: number) => {
-    const active = onIndexChange ? currentIndex : internalIndex
+    const active = onIndexChange ? currentIndex : internalIndex;
 
-    const n = slides.length
+    const n = slides.length;
 
-    const raw = i - active
+    const raw = i - active;
 
-    const wrapped = ((raw % n) + n) % n
+    const wrapped = ((raw % n) + n) % n;
 
-    const alt = wrapped - n
+    const alt = wrapped - n;
 
-    return Math.abs(wrapped) <= Math.abs(alt) ? wrapped : alt
-  }
+    return Math.abs(wrapped) <= Math.abs(alt) ? wrapped : alt;
+  };
 
   return (
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -249,21 +250,21 @@ function CardsBackgroundCarousel({
       >
         <div className="relative h-[58vh] w-full max-w-[1600px]">
           {slides.map((s, i) => {
-            const d = getDelta(i)
+            const d = getDelta(i);
 
-            const visible = Math.abs(d) <= 2
+            const visible = Math.abs(d) <= 2;
 
-            const cardWidthVh = 40
+            const cardWidthVh = 40;
 
-            const gapVh = 6
+            const gapVh = 6;
 
-            const translateX = d * (cardWidthVh + gapVh)
+            const translateX = d * (cardWidthVh + gapVh);
 
-            const scale = i === currentIndex ? 1.12 : 0.94
+            const scale = i === currentIndex ? 1.12 : 0.94;
 
-            const rotateY = d * -8
+            const rotateY = d * -8;
 
-            const z = 100 - Math.abs(d) * 10
+            const z = 100 - Math.abs(d) * 10;
 
             return (
               <motion.div
@@ -296,32 +297,32 @@ function CardsBackgroundCarousel({
                       sizes="(max-width: 768px) 40vh, 40vh"
                       className="object-cover"
                       onError={(e) => {
-                        const img = e.target as HTMLImageElement
+                        const img = e.target as HTMLImageElement;
 
-                        img.src = "/ultrinho.png"
+                        img.src = "/ultrinho.png";
                       }}
                     />
                   </div>
                 </div>
               </motion.div>
-            )
+            );
           })}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // Sponsor button component
 
 const FEATURE_HIGHLIGHTS: Array<{
-  icon: LucideIcon
+  icon: LucideIcon;
 
-  title: string
+  title: string;
 
-  description: string
+  description: string;
 
-  bullets: string[]
+  bullets: string[];
 }> = [
   {
     icon: Sparkles,
@@ -382,7 +383,7 @@ const FEATURE_HIGHLIGHTS: Array<{
       "Registros auditáveis em tempo real",
     ],
   },
-]
+];
 
 const WORKFLOW_STEPS = [
   {
@@ -411,14 +412,14 @@ const WORKFLOW_STEPS = [
     description:
       "Envie para aprovação, acompanhe comentários em tempo real e publique nos canais certos em poucos cliques.",
   },
-] as const
+] as const;
 
 const TEAM_ENABLEMENT: Array<{
-  icon: LucideIcon
+  icon: LucideIcon;
 
-  title: string
+  title: string;
 
-  description: string
+  description: string;
 }> = [
   {
     icon: Users,
@@ -446,7 +447,7 @@ const TEAM_ENABLEMENT: Array<{
     description:
       "Visualize desempenho de materiais, reuso de componentes e economia de tempo em tempo real.",
   },
-]
+];
 
 const IMPACT_CARDS = [
   {
@@ -467,7 +468,7 @@ const IMPACT_CARDS = [
 
     description: "do briefing à publicação com aprovações automatizadas",
   },
-] as const
+] as const;
 
 function FeatureHighlightsSection({ onLogin }: { onLogin: () => void }) {
   return (
@@ -480,15 +481,15 @@ function FeatureHighlightsSection({ onLogin }: { onLogin: () => void }) {
           viewport={{ once: true, margin: "-160px" }}
           className="mx-auto max-w-3xl text-center"
         >
-          <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/40">
+          <span className="text-sm font-semibold uppercase tracking-[0.35em] text-white/50">
             Funcionalidades
           </span>
 
-          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
             Tudo que sua squad precisa para criar com a Ultragaz
           </h2>
 
-          <p className="mt-4 text-base text-white/70">
+          <p className="mt-5 text-lg text-white/75">
             Combine geração assistida, bibliotecas oficiais e colaboração em
             tempo real em um único espaço.
           </p>
@@ -496,7 +497,7 @@ function FeatureHighlightsSection({ onLogin }: { onLogin: () => void }) {
 
         <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {FEATURE_HIGHLIGHTS.map((feature, index) => {
-            const Icon = feature.icon
+            const Icon = feature.icon;
 
             return (
               <motion.article
@@ -505,45 +506,45 @@ function FeatureHighlightsSection({ onLogin }: { onLogin: () => void }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-120px" }}
                 transition={{ duration: 0.4, delay: index * 0.08 }}
-                className="flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_18px_60px_rgba(12,20,38,0.35)] backdrop-blur"
+                className="flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-7 shadow-[0_24px_70px_rgba(12,20,38,0.4)] backdrop-blur"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-200">
-                  <Icon className="h-6 w-6" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-[#6E56CF]/15 text-[#6E56CF]">
+                  <Icon className="h-7 w-7" />
                 </div>
 
-                <h3 className="mt-6 text-lg font-semibold">{feature.title}</h3>
+                <h3 className="mt-6 text-xl font-semibold">{feature.title}</h3>
 
-                <p className="mt-3 text-sm text-white/70">
+                <p className="mt-3 text-base text-white/80">
                   {feature.description}
                 </p>
 
-                <ul className="mt-4 space-y-2 text-sm text-white/60">
+                <ul className="mt-5 space-y-2 text-base text-white/75">
                   {feature.bullets.map((bullet) => (
                     <li key={bullet} className="flex items-start gap-2">
-                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                      <span className="mt-1 h-2 w-2 rounded-full bg-[#6E56CF]" />
 
                       <span>{bullet}</span>
                     </li>
                   ))}
                 </ul>
               </motion.article>
-            )
+            );
           })}
         </div>
 
         <div className="mt-12 flex justify-center">
           <Button
             size="lg"
-            className="rounded-full bg-emerald-500 px-6 text-sm font-semibold text-neutral-950 transition hover:bg-emerald-400"
+            className="rounded-full bg-[#6E56CF] px-8 text-base font-semibold text-white transition hover:bg-[#5d48ba]"
             onClick={onLogin}
           >
             Experimentar agora
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="ml-3 h-5 w-5" />
           </Button>
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 function WorkflowShowcaseSection() {
@@ -557,15 +558,15 @@ function WorkflowShowcaseSection() {
           viewport={{ once: true, margin: "-140px" }}
           className="text-center"
         >
-          <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/40">
+          <span className="text-sm font-semibold uppercase tracking-[0.35em] text-white/50">
             Workflow
           </span>
 
-          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
             Do briefing à entrega sem sair do GenID
           </h2>
 
-          <p className="mt-4 text-base text-white/70">
+          <p className="mt-5 text-lg text-white/75">
             Cada etapa foi desenhada para squads multidisciplinares trabalharem
             com velocidade e controle.
           </p>
@@ -579,21 +580,21 @@ function WorkflowShowcaseSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-80px" }}
               transition={{ duration: 0.4, delay: index * 0.08 }}
-              className="relative flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur"
+              className="relative flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur"
             >
-              <span className="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-300/80">
+              <span className="text-sm font-semibold uppercase tracking-[0.3em] text-[#6E56CF]">
                 {step.label}
               </span>
 
-              <h3 className="mt-4 text-xl font-semibold">{step.title}</h3>
+              <h3 className="mt-5 text-2xl font-semibold">{step.title}</h3>
 
-              <p className="mt-3 text-sm text-white/70">{step.description}</p>
+              <p className="mt-4 text-base text-white/75">{step.description}</p>
             </motion.article>
           ))}
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 function TeamEnablementSection({ onLogin }: { onLogin: () => void }) {
@@ -607,15 +608,15 @@ function TeamEnablementSection({ onLogin }: { onLogin: () => void }) {
           viewport={{ once: true, margin: "-140px" }}
           className="mx-auto max-w-3xl text-center"
         >
-          <span className="text-xs font-semibold uppercase tracking-[0.4em] text-neutral-500">
+          <span className="text-sm font-semibold uppercase tracking-[0.35em] text-neutral-500">
             Colaboração
           </span>
 
-          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
             A plataforma que conecta marketing, comercial e operações
           </h2>
 
-          <p className="mt-4 text-base text-neutral-600">
+          <p className="mt-5 text-lg text-neutral-600/90">
             Garanta que todas as áreas trabalhem com o mesmo conteúdo, processos
             e indicadores, independente da região.
           </p>
@@ -623,7 +624,7 @@ function TeamEnablementSection({ onLogin }: { onLogin: () => void }) {
 
         <div className="mt-14 grid gap-6 md:grid-cols-3">
           {TEAM_ENABLEMENT.map((card, index) => {
-            const Icon = card.icon
+            const Icon = card.icon;
 
             return (
               <motion.article
@@ -632,21 +633,21 @@ function TeamEnablementSection({ onLogin }: { onLogin: () => void }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ duration: 0.4, delay: index * 0.08 }}
-                className="flex h-full flex-col rounded-3xl border border-neutral-200 bg-white p-6 shadow-[0_18px_60px_rgba(12,20,38,0.08)]"
+                className="flex h-full flex-col rounded-3xl border border-neutral-200 bg-white p-8 shadow-[0_22px_70px_rgba(12,20,38,0.12)]"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1c2f5c]/10 text-[#1c2f5c]">
+                <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-[#6E56CF]/15 text-[#6E56CF]">
                   <Icon className="h-6 w-6" />
                 </div>
 
-                <h3 className="mt-6 text-lg font-semibold text-neutral-900">
+                <h3 className="mt-6 text-xl font-semibold text-neutral-900">
                   {card.title}
                 </h3>
 
-                <p className="mt-3 text-sm text-neutral-600">
+                <p className="mt-5 text-lg text-neutral-600/90">
                   {card.description}
                 </p>
               </motion.article>
-            )
+            );
           })}
         </div>
 
@@ -654,13 +655,13 @@ function TeamEnablementSection({ onLogin }: { onLogin: () => void }) {
           {IMPACT_CARDS.map((impact) => (
             <div
               key={impact.value}
-              className="rounded-3xl border border-neutral-200 bg-neutral-50 px-6 py-8 text-center shadow-sm"
+              className="rounded-3xl border border-neutral-200 bg-neutral-50 px-8 py-10 text-center shadow-lg"
             >
-              <p className="text-4xl font-bold text-[#1c2f5c]">
+              <p className="text-5xl font-bold text-[#6E56CF]">
                 {impact.value}
               </p>
 
-              <p className="mt-3 text-sm text-neutral-600">
+              <p className="mt-5 text-lg text-neutral-600/90">
                 {impact.description}
               </p>
             </div>
@@ -670,16 +671,16 @@ function TeamEnablementSection({ onLogin }: { onLogin: () => void }) {
         <div className="mt-12 flex justify-center">
           <Button
             size="lg"
-            className="rounded-full bg-[#1c2f5c] px-6 text-sm font-semibold text-white hover:bg-[#243974]"
+            className="rounded-full bg-[#6E56CF] px-8 text-base font-semibold text-white hover:bg-[#5d48ba]"
             onClick={onLogin}
           >
             Abrir conta para minha equipe
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="ml-3 h-5 w-5" />
           </Button>
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 function FinalCtaSection({ onLogin }: { onLogin: () => void }) {
@@ -691,7 +692,7 @@ function FinalCtaSection({ onLogin }: { onLogin: () => void }) {
             Pronto para criar com a Ultragaz?
           </h2>
 
-          <p className="mt-4 text-base text-white/70">
+          <p className="mt-5 text-lg text-white/75">
             Acelere campanhas, conecte squads e mantenha a identidade da marca
             em qualquer canal.
           </p>
@@ -699,17 +700,17 @@ function FinalCtaSection({ onLogin }: { onLogin: () => void }) {
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button
               size="lg"
-              className="rounded-full bg-emerald-500 px-6 text-sm font-semibold text-neutral-950 hover:bg-emerald-400"
+              className="rounded-full bg-[#6E56CF] px-8 text-base font-semibold text-white hover:bg-[#5d48ba]"
               onClick={onLogin}
             >
               Criar minha primeira campanha
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ml-3 h-5 w-5" />
             </Button>
 
             <Button
               size="lg"
               variant="outline"
-              className="rounded-full border-white/40 bg-white/5 px-6 text-sm font-semibold text-white hover:bg-white/10"
+              className="rounded-full border-white/40 bg-white/5 px-8 text-base font-semibold text-white/90 hover:bg-white/15"
               onClick={onLogin}
             >
               Falar com um especialista
@@ -718,7 +719,7 @@ function FinalCtaSection({ onLogin }: { onLogin: () => void }) {
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 function SponsorButton() {
@@ -755,27 +756,27 @@ function SponsorButton() {
         </span>
       </div>
     </motion.a>
-  )
+  );
 }
 
 export default function WelcomePage() {
-  const { data: session, isPending } = useSession()
+  const { data: session, isPending } = useSession();
 
-  const router = useRouter()
+  const router = useRouter();
 
-  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  const [autoPlay, setAutoPlay] = useState(true)
+  const [autoPlay, setAutoPlay] = useState(true);
 
   // Redirect if already logged in
 
   useEffect(() => {
     if (!isPending && session?.session) {
-      router.push("/studio")
+      router.push("/studio");
     }
-  }, [session, isPending, router])
+  }, [session, isPending, router]);
 
   const slides = useMemo(
     () => [
@@ -885,7 +886,7 @@ export default function WelcomePage() {
     ],
 
     [],
-  )
+  );
 
   const backgroundSlides = useMemo(
     () => [
@@ -1000,26 +1001,26 @@ export default function WelcomePage() {
     ],
 
     [],
-  )
+  );
 
   const go = useCallback(
     (dir: -1 | 1) => {
-      setCurrentIndex((i) => (i + dir + slides.length) % slides.length)
+      setCurrentIndex((i) => (i + dir + slides.length) % slides.length);
     },
 
     [slides.length],
-  )
+  );
 
   const handleOpenLogin = useCallback(() => {
-    setShowLoginModal(true)
-  }, [])
+    setShowLoginModal(true);
+  }, []);
 
   if (isPending) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
@@ -1071,7 +1072,7 @@ export default function WelcomePage() {
             >
               <div className="mx-auto rounded-2xl bg-white/20 backdrop-blur-sm text-white shadow-xl ring-1 ring-white/10 px-6 py-6 md:px-10 md:py-8">
                 <div className="text-left md:text-center">
-                  <h1 className="font-extrabold tracking-tight text-[2rem] md:text-[3.25rem] leading-[1.1]">
+                  <h1 className="font-extrabold tracking-tight text-[2.5rem] md:text-[3.75rem] lg:text-[4rem] leading-[1.05]">
                     <RotatingTypedText
                       items={slides.map((s) => s.text)}
                       activeIndex={currentIndex}
@@ -1086,11 +1087,11 @@ export default function WelcomePage() {
                   <Button
                     type="button"
                     size="lg"
-                    className="px-6 h-11 text-base bg-[#6E56CF] hover:bg-[#5d48ba]"
+                    className="px-8 h-12 text-lg bg-[#6E56CF] hover:bg-[#5d48ba]"
                     onClick={handleOpenLogin}
                   >
                     Comece agora
-                    <ArrowRight className="relative z-10 ml-1 h-4 w-4 inline-block" />
+                    <ArrowRight className="relative z-10 ml-2 h-5 w-5 inline-block" />
                   </Button>
                 </div>
               </div>
@@ -1099,7 +1100,7 @@ export default function WelcomePage() {
             {/* Description text */}
 
             <motion.p
-              className="mt-8 text-sm sm:text-base text-white/90 font-normal tracking-wide max-w-2xl mx-auto"
+              className="mt-10 text-lg sm:text-xl text-white/85 font-normal tracking-wide max-w-3xl mx-auto"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.8 }}
@@ -1172,5 +1173,5 @@ export default function WelcomePage() {
 
       <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
     </>
-  )
+  );
 }

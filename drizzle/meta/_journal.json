@@ -23,12 +23,19 @@
                         "tag":  "0002_add_user_credits",
                         "breakpoints":  false
                     },
-                    {
-                        "idx":  3,
-                        "version":  "7",
-                        "when":  1890000000001,
-                        "tag":  "0003_imagekit_fields",
-                        "breakpoints":  false
-                    }
-                ]
+        {
+            "idx":  3,
+            "version":  "7",
+            "when":  1890000000001,
+            "tag":  "0003_imagekit_fields",
+            "breakpoints":  false
+        },
+        {
+            "idx":  4,
+            "version":  "7",
+            "when":  1950000000000,
+            "tag":  "0006_add_video_column",
+            "breakpoints":  false
+        }
+    ]
 }
